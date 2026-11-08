@@ -1,0 +1,815 @@
+﻿<Page x:Class="EaglesResort.Views.Pages.BookingPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+      xmlns:helpers="clr-namespace:EaglesResort.Helpers"
+      Title="Booking"
+      Background="#111E2B"
+      FlowDirection="RightToLeft"
+      UseLayoutRounding="True"
+      SnapsToDevicePixels="True"
+      TextOptions.TextFormattingMode="Display"
+      TextOptions.TextRenderingMode="ClearType"
+      RenderOptions.ClearTypeHint="Enabled"
+      FontFamily="Segoe UI, Tahoma, Arial">
+
+    <Page.Resources>
+        <helpers:BoolToVisibilityConverter x:Key="BoolToVis"/>
+        <helpers:InverseBoolToVisibilityConverter x:Key="InvBoolToVis"/>
+    </Page.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" PanningMode="VerticalOnly" CanContentScroll="False">
+        <Grid Margin="20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2.2*"/>
+                <ColumnDefinition Width="24"/>
+                <ColumnDefinition Width="1*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ================= LEFT COLUMN: Data Entry ================= -->
+            <StackPanel Grid.Column="0">
+
+                <!-- 1. Guest Information Card -->
+                <Border Style="{StaticResource CardBorder}" Margin="0,0,0,16" Padding="14">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                            <materialDesign:PackIcon Kind="AccountTie" Width="20" Height="20" Foreground="#D4A017" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="بيانات النزيل الأساسية" FontSize="17" FontWeight="Bold" Foreground="#D4A017" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <!-- Row 1: Category, Rank, Name, Phone 1, Phone 2 -->
+                        <Grid Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.3*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="1*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="1.5*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="1.1*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="1.1*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Guest Category -->
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="فئة النزيل / الرتبة *" Foreground="#CBD5E1" FontSize="13" Margin="0,0,0,4"/>
+                                <ComboBox ItemsSource="{Binding GuestCategories}" SelectedItem="{Binding SelectedGuestCategory}"
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                          Foreground="#F0F4F8" Background="#1A2533" FontSize="14.5" Padding="10,7"/>
+                            </StackPanel>
+
+                            <!-- Detailed Military Rank Dropdown -->
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="رتبة مفصلة" Foreground="#CBD5E1" FontSize="13" Margin="0,0,0,4"/>
+                                <ComboBox ItemsSource="{Binding MilitaryRanks}" SelectedItem="{Binding GuestRank}"
+                                          IsEnabled="{Binding IsMilitary}"
+                                          IsEditable="True"
+                                          materialDesign:HintAssist.Hint="اختر الرتبة"
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                          Foreground="#F0F4F8" Background="#1A2533" FontSize="14.5" Padding="10,7"/>
+                            </StackPanel>
+
+                            <!-- Guest Name -->
+                            <StackPanel Grid.Column="4">
+                                <TextBlock Text="اسم النزيل *" Foreground="#CBD5E1" FontSize="13" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding GuestName, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         Foreground="#F0F4F8" Background="#1A2533" FontSize="14.5" Padding="10,7"/>
+                            </StackPanel>
+
+                            <!-- Primary Phone -->
+                            <StackPanel Grid.Column="6">
+                                <TextBlock Text="رقم الهاتف *" Foreground="#CBD5E1" FontSize="13" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding PhoneNumber, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         Foreground="#F0F4F8" Background="#1A2533" FontSize="14.5" Padding="10,7"/>
+                            </StackPanel>
+
+                            <!-- Secondary Phone -->
+                            <StackPanel Grid.Column="8">
+                                <TextBlock Text="رقم هاتف إضافي" Foreground="#CBD5E1" FontSize="13" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding SecondaryPhoneNumber, UpdateSourceTrigger=PropertyChanged}"
+                                         materialDesign:HintAssist.Hint="موبايل آخر (اختياري)"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         Foreground="#F0F4F8" Background="#1A2533" FontSize="14.5" Padding="10,7"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Row 2: System, Membership, Adults, Children, Insurance -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.2*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="1.6*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="0.8*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="0.8*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="1.4*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Payment System -->
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="المنظومة" Foreground="#CBD5E1" FontSize="13" Margin="0,0,0,4"/>
+                                <ComboBox ItemsSource="{Binding PaymentSystems}" SelectedItem="{Binding SelectedPaymentSystem}"
+                                          IsEnabled="{Binding IsMilitary}"
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                          Foreground="#F0F4F8" Background="#1A2533" FontSize="14.5" Padding="10,7"/>
+                            </StackPanel>
+
+                            <!-- Membership -->
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Bottom">
+                                <CheckBox IsChecked="{Binding HasResortMembership}" Content="عضوية (ق.ج)"
+                                          Foreground="#F0F4F8" Margin="0,0,6,6" FontSize="13.5"/>
+                                <TextBox Text="{Binding MembershipNumber, UpdateSourceTrigger=PropertyChanged}"
+                                         materialDesign:HintAssist.Hint="رقم العضوية" Width="110"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         Foreground="#F0F4F8" Background="#1A2533" FontSize="14.5" Padding="8,7"
+                                         Visibility="{Binding HasResortMembership, Converter={StaticResource BoolToVis}}"/>
+                            </StackPanel>
+
+                            <!-- Adults -->
+                            <StackPanel Grid.Column="4">
+                                <TextBlock Text="بالغين" Foreground="#CBD5E1" FontSize="13" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding AdultCount, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         Foreground="#F0F4F8" Background="#1A2533" FontSize="14.5" Padding="8,7" TextAlignment="Center"/>
+                            </StackPanel>
+
+                            <!-- Children -->
+                            <StackPanel Grid.Column="6">
+                                <TextBlock Text="أطفال" Foreground="#CBD5E1" FontSize="13" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding ChildCount, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         Foreground="#F0F4F8" Background="#1A2533" FontSize="14.5" Padding="8,7" TextAlignment="Center"/>
+                            </StackPanel>
+
+                            <!-- Insurance -->
+                            <StackPanel Grid.Column="8" Orientation="Horizontal" VerticalAlignment="Bottom">
+                                <CheckBox IsChecked="{Binding HasInsurance}" Content="تأمين"
+                                          Foreground="#F0F4F8" Margin="0,0,6,6" FontSize="13.5"/>
+                                <TextBox Text="{Binding Insurance, UpdateSourceTrigger=PropertyChanged}" Width="95"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         Foreground="#F0F4F8" Background="#1A2533" FontSize="14.5" Padding="8,7"
+                                         Visibility="{Binding HasInsurance, Converter={StaticResource BoolToVis}}"/>
+                            </StackPanel>
+                        </Grid>
+
+                    </StackPanel>
+                </Border>
+
+                <!-- 2. Booked Chalets Section (Multi-Chalet Support) -->
+                <Border Style="{StaticResource CardBorder}" Margin="0,0,0,16" Padding="14">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <materialDesign:PackIcon Kind="HomeGroup" Width="22" Height="22" Foreground="#60A5FA" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="الشاليهات المحجوزة والإقامة (يمكن حجز أكثر من شاليه)" FontSize="17" FontWeight="Bold" Foreground="#60A5FA" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Command="{Binding AddChaletCommand}" Style="{StaticResource GoldButton}" Padding="12,6" Margin="0,0,10,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="PlusCircle" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="إضافة شاليه آخر للحجز" FontSize="13" FontWeight="Bold"/>
+                                    </StackPanel>
+                                </Button>
+                                <!-- Toggle per-chalet guests button -->
+                                <Button Command="{Binding TogglePerChaletGuestsCommand}" Style="{StaticResource MaterialDesignOutlinedButton}"
+                                        Foreground="#94A3B8" BorderBrush="#2D3F55" Padding="10,4" Height="34" FontSize="13">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="AccountMultiple" Width="14" Height="14" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="أفراد مشتركة" Visibility="{Binding UseSharedGuests, Converter={StaticResource BoolToVis}}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="أفراد لكل شاليه" Visibility="{Binding UsePerChaletGuests, Converter={StaticResource BoolToVis}}" VerticalAlignment="Center" Foreground="#D4A017"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Items Control for each chalet -->
+                        <ItemsControl ItemsSource="{Binding BookedChalets}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#162232" CornerRadius="8" BorderBrush="#2D3F55" BorderThickness="1" Margin="0,0,0,10" Padding="10">
+                                        <StackPanel>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <!-- Index & Delete -->
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <!-- Chalet selection -->
+                                                    <ColumnDefinition Width="1.8*"/>
+                                                    <ColumnDefinition Width="6"/>
+                                                    <!-- Dates -->
+                                                    <ColumnDefinition Width="1.1*"/>
+                                                    <ColumnDefinition Width="6"/>
+                                                    <ColumnDefinition Width="1.1*"/>
+                                                    <ColumnDefinition Width="6"/>
+                                                    <!-- Days & Rate -->
+                                                    <ColumnDefinition Width="0.6*"/>
+                                                    <ColumnDefinition Width="6"/>
+                                                    <ColumnDefinition Width="1*"/>
+                                                    <ColumnDefinition Width="6"/>
+                                                    <!-- Chalet Total -->
+                                                    <ColumnDefinition Width="1*"/>
+                                                    <ColumnDefinition Width="6"/>
+                                                    <!-- Deposit & Date -->
+                                                    <ColumnDefinition Width="1.1*"/>
+                                                    <ColumnDefinition Width="6"/>
+                                                    <ColumnDefinition Width="1.1*"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <!-- Row Index & Delete Button -->
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+                                                    <Border Background="#243447" CornerRadius="4" Padding="6,4" Margin="0,0,4,0">
+                                                        <TextBlock Text="{Binding ItemIndex, StringFormat={}{0}#}" Foreground="#D4A017" FontWeight="Bold" FontSize="13.5"/>
+                                                    </Border>
+                                                    <Button Command="{Binding DataContext.RemoveChaletCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                                        CommandParameter="{Binding}"
+                                                        IsEnabled="{Binding CanDelete}"
+                                                        Style="{StaticResource MaterialDesignIconButton}"
+                                                        ToolTip="حذف هذا الشاليه" Width="28" Height="28" Margin="0" Foreground="#EF4444">
+                                                        <materialDesign:PackIcon Kind="DeleteOutline" Width="18" Height="18"/>
+                                                    </Button>
+                                                </StackPanel>
+
+                                                <!-- Chalet Selection -->
+                                                <StackPanel Grid.Column="1">
+                                                    <TextBlock Text="الشاليه *" Foreground="#CBD5E1" FontSize="13" Margin="0,0,0,2"/>
+                                                    <ComboBox ItemsSource="{Binding DataContext.AvailableChalets, RelativeSource={RelativeSource AncestorType=Page}}"
+                                                          SelectedItem="{Binding SelectedChalet, UpdateSourceTrigger=PropertyChanged}"
+                                                          IsEditable="True" IsTextSearchEnabled="True" TextSearch.TextPath="Number"
+                                                          materialDesign:HintAssist.Hint="اختر الشاليه..."
+                                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                                          Foreground="#F0F4F8" Background="#1A2533" FontSize="14" Padding="8,6">
+                                                        <ComboBox.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <TextBlock>
+                                                                    <TextBlock.Text>
+                                                                        <MultiBinding StringFormat="{}{0} - {1}">
+                                                                            <Binding Path="Number"/>
+                                                                            <Binding Path="ChaletType"/>
+                                                                        </MultiBinding>
+                                                                    </TextBlock.Text>
+                                                                </TextBlock>
+                                                            </DataTemplate>
+                                                        </ComboBox.ItemTemplate>
+                                                    </ComboBox>
+                                                </StackPanel>
+
+                                                <!-- CheckIn Date -->
+                                                <StackPanel Grid.Column="3">
+                                                    <TextBlock Text="دخول *" Foreground="#CBD5E1" FontSize="13" Margin="0,0,0,2"/>
+                                                    <DatePicker Language="en-GB" SelectedDate="{Binding CheckInDate, UpdateSourceTrigger=PropertyChanged}"
+                                                            Style="{StaticResource MaterialDesignOutlinedDatePicker}"
+                                                            Foreground="#F0F4F8" Background="#1A2533" FontSize="13.5" Padding="6,5"/>
+                                                </StackPanel>
+
+                                                <!-- CheckOut Date -->
+                                                <StackPanel Grid.Column="5">
+                                                    <TextBlock Text="مغادرة *" Foreground="#CBD5E1" FontSize="13" Margin="0,0,0,2"/>
+                                                    <DatePicker Language="en-GB" SelectedDate="{Binding CheckOutDate, UpdateSourceTrigger=PropertyChanged}"
+                                                            Style="{StaticResource MaterialDesignOutlinedDatePicker}"
+                                                            Foreground="#F0F4F8" Background="#1A2533" FontSize="13.5" Padding="6,5"/>
+                                                </StackPanel>
+
+                                                <!-- Days Badge -->
+                                                <StackPanel Grid.Column="7" VerticalAlignment="Center">
+                                                    <TextBlock Text="الأيام" Foreground="#CBD5E1" FontSize="13" HorizontalAlignment="Center" Margin="0,0,0,2"/>
+                                                    <Border Background="#243447" CornerRadius="4" Padding="4,6">
+                                                        <TextBlock Text="{Binding NumberOfDays}" Foreground="#60A5FA" FontWeight="Bold" FontSize="13" HorizontalAlignment="Center"/>
+                                                    </Border>
+                                                </StackPanel>
+
+                                                <!-- Daily Rate -->
+                                                <StackPanel Grid.Column="9">
+                                                    <TextBlock Text="سعر اليوم" Foreground="#CBD5E1" FontSize="13" Margin="0,0,0,2"/>
+                                                    <TextBox Text="{Binding DailyRate, UpdateSourceTrigger=PropertyChanged}"
+                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                         Foreground="#D4A017" Background="#1A2533" FontSize="14" Padding="6,5" TextAlignment="Center"/>
+                                                </StackPanel>
+
+                                                <!-- Chalet Total -->
+                                                <StackPanel Grid.Column="11" VerticalAlignment="Center">
+                                                    <TextBlock Text="إجمالي الشاليه" Foreground="#CBD5E1" FontSize="13" HorizontalAlignment="Center" Margin="0,0,0,2"/>
+                                                    <Border Background="#1E2D3D" CornerRadius="4" Padding="6,6">
+                                                        <TextBlock Text="{Binding ChaletTotal, StringFormat={}{0:N0} ج.م}" Foreground="#22C55E" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
+                                                    </Border>
+                                                </StackPanel>
+
+                                                <!-- Chalet Deposit -->
+                                                <StackPanel Grid.Column="13">
+                                                    <TextBlock Text="ديبوزت (مقدم)" Foreground="#CBD5E1" FontSize="13" Margin="0,0,0,2"/>
+                                                    <TextBox Text="{Binding Deposit, UpdateSourceTrigger=PropertyChanged}"
+                                                         materialDesign:HintAssist.Hint="0"
+                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                         Foreground="#EF4444" Background="#1A2533" FontSize="14" Padding="6,5" TextAlignment="Center"/>
+                                                </StackPanel>
+
+                                                <!-- Deposit Date -->
+                                                <StackPanel Grid.Column="15">
+                                                    <TextBlock Text="تاريخ الديبوزت" Foreground="#CBD5E1" FontSize="13" Margin="0,0,0,2"/>
+                                                    <DatePicker Language="en-GB" SelectedDate="{Binding DepositDate, UpdateSourceTrigger=PropertyChanged}"
+                                                            Style="{StaticResource MaterialDesignOutlinedDatePicker}"
+                                                            Foreground="#F0F4F8" Background="#1A2533" FontSize="13.5" Padding="6,5"/>
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <!-- Per-chalet guests row (visible only in per-chalet mode) -->
+                                            <Grid Margin="4,6,4,0"
+                                              Visibility="{Binding DataContext.UsePerChaletGuests, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource BoolToVis}}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="10"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <!-- Adults per chalet -->
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Text="بالغين" Foreground="#CBD5E1" FontSize="13" Margin="0,0,0,2"/>
+                                                    <TextBox Text="{Binding AdultCount, UpdateSourceTrigger=PropertyChanged}"
+                                                         materialDesign:HintAssist.Hint="0"
+                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                         Foreground="#F0F4F8" Background="#1A2533" FontSize="14" Padding="6,4" TextAlignment="Center"/>
+                                                </StackPanel>
+                                                <!-- Children per chalet -->
+                                                <StackPanel Grid.Column="2">
+                                                    <TextBlock Text="أطفال" Foreground="#CBD5E1" FontSize="13" Margin="0,0,0,2"/>
+                                                    <TextBox Text="{Binding ChildCount, UpdateSourceTrigger=PropertyChanged}"
+                                                         materialDesign:HintAssist.Hint="0"
+                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                         Foreground="#F0F4F8" Background="#1A2533" FontSize="14" Padding="6,4" TextAlignment="Center"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                    </StackPanel>
+                </Border>
+
+                <!-- 3. Meals & Extras Settings -->
+                <Border Style="{StaticResource CardBorder}" Margin="0,0,0,16" Padding="14">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                            <materialDesign:PackIcon Kind="SilverwareForkKnife" Width="20" Height="20" Foreground="#22C55E" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="إعدادات الوجبات والخدمات الإضافية" FontSize="17" FontWeight="Bold" Foreground="#22C55E" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.2*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="1*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="1*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="1.2*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="1.5*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Meal Plan -->
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="خطة الوجبات" Foreground="#CBD5E1" FontSize="13" Margin="0,0,0,4"/>
+                                <ComboBox ItemsSource="{Binding MealPlans}" SelectedItem="{Binding SelectedMealPlan}"
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                          Foreground="#F0F4F8" Background="#1A2533" FontSize="14.5" Padding="8,7"/>
+                            </StackPanel>
+
+                            <!-- Adults Meals -->
+                            <StackPanel Grid.Column="1" Grid.ColumnSpan="3" Margin="8,-13,8,13">
+                                <TextBlock Text="وجبات البالغين" Foreground="#CBD5E1" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,2" HorizontalAlignment="Center"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="1*"/>
+                                        <ColumnDefinition Width="6"/>
+                                        <ColumnDefinition Width="1.2*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="العدد" Foreground="#94A3B8" FontSize="11" Margin="0,0,0,2" HorizontalAlignment="Center"/>
+                                        <TextBox Text="{Binding AdultMealsCount, Mode=OneWay}" IsEnabled="False"
+                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                 Foreground="#F0F4F8" Background="#1A2533" Padding="4,6" FontSize="13.5" TextAlignment="Center"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="السعر" Foreground="#94A3B8" FontSize="11" Margin="0,0,0,2" HorizontalAlignment="Center"/>
+                                        <TextBox Text="{Binding AdultMealRate, UpdateSourceTrigger=PropertyChanged}"
+                                                 IsEnabled="{Binding IsAdmin}"
+                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                 Foreground="#D4A017" Background="#1A2533" Padding="4,6" FontSize="13.5" TextAlignment="Center"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+
+                            <!-- Child Meals -->
+                            <StackPanel Grid.Column="4" Margin="0,-13,0,13">
+                                <TextBlock Text="وجبات الأطفال" Foreground="#CBD5E1" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,2" HorizontalAlignment="Center"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="1*"/>
+                                        <ColumnDefinition Width="6"/>
+                                        <ColumnDefinition Width="1.2*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="العدد" Foreground="#94A3B8" FontSize="11" Margin="0,0,0,2" HorizontalAlignment="Center"/>
+                                        <TextBox Text="{Binding ChildMealsCount, Mode=OneWay}" IsEnabled="False"
+                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                 Foreground="#F0F4F8" Background="#1A2533" Padding="4,6" FontSize="13.5" TextAlignment="Center"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="السعر" Foreground="#94A3B8" FontSize="11" Margin="0,0,0,2" HorizontalAlignment="Center"/>
+                                        <TextBox Text="{Binding ChildMealRate, UpdateSourceTrigger=PropertyChanged}"
+                                                 IsEnabled="{Binding IsAdmin}"
+                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                 Foreground="#D4A017" Background="#1A2533" Padding="4,6" FontSize="13.5" TextAlignment="Center"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                            <!-- Extra Services -->
+                            <StackPanel Grid.Column="6">
+                                <TextBlock Text="خدمات إضافية (سعر)" Foreground="#CBD5E1" FontSize="13" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding ExtraServices, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         Foreground="#F0F4F8" Background="#1A2533" FontSize="14.5" Padding="8,7" TextAlignment="Center"/>
+                            </StackPanel>
+
+                            <!-- Extra Services Note -->
+                            <StackPanel Grid.Column="8">
+                                <TextBlock Text="بيان الخدمات الإضافية" Foreground="#CBD5E1" FontSize="13" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding ExtraServicesNote, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         Foreground="#F0F4F8" Background="#1A2533" FontSize="14.5" Padding="8,7"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Notes -->
+                        <StackPanel>
+                            <TextBlock Text="ملاحظات الحجز" Foreground="#CBD5E1" FontSize="13" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding Notes}" Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     Foreground="#F0F4F8" Background="#1A2533" Height="50" TextWrapping="Wrap" AcceptsReturn="True" Padding="8,6"/>
+                        </StackPanel>
+
+                    </StackPanel>
+                </Border>
+
+                <!-- 4. Housing + Meals Split Payment Section -->
+                <Border Style="{StaticResource CardBorder}" Padding="14">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <materialDesign:PackIcon Kind="CashMultiple" Width="20" Height="20" Foreground="#F59E0B" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock FontSize="17" FontWeight="Bold" Foreground="#F59E0B" Height="26"><Run Text=" طرق الدفع وسداد المبلغ "/><LineBreak/><Run/></TextBlock>
+                        </StackPanel>
+
+                        <!-- ======= HOUSING PAYMENT ======= -->
+                        <Border Background="#0D1B2A" CornerRadius="8" Padding="12" Margin="0,0,0,10" BorderBrush="#1E3A52" BorderThickness="1">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <materialDesign:PackIcon Kind="Home" Width="16" Height="16" Foreground="#60A5FA" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="سداد الإسكان" FontSize="15" FontWeight="Bold" Foreground="#60A5FA"/>
+                                    <TextBlock Text="{Binding HousingAfterDeposit, StringFormat={}  (المطلوب: {0:N0} ج.م)}" FontSize="13.5" Foreground="#CBD5E1" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="1*"/>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="1*"/>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="1*"/>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="1*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <!-- Cash -->
+                                    <Border Grid.Column="0" Background="#162232" CornerRadius="6" Padding="8" BorderBrush="#2D3F55" BorderThickness="1">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                <materialDesign:PackIcon Kind="Cash" Width="14" Height="14" Foreground="#22C55E" Margin="0,0,4,0"/>
+                                                <TextBlock Text="كاش (ج.م)" Foreground="#CBD5E1" FontSize="13" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                            <TextBox Text="{Binding CashPaid, UpdateSourceTrigger=PropertyChanged}"
+                                                     materialDesign:HintAssist.Hint="0"
+                                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                     Foreground="#22C55E" Background="#1A2533" FontSize="13" FontWeight="Bold" Padding="6,4" TextAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <!-- InstaPay -->
+                                    <Border Grid.Column="2" Background="#162232" CornerRadius="6" Padding="8" BorderBrush="#2D3F55" BorderThickness="1">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                <materialDesign:PackIcon Kind="CellphoneCheck" Width="14" Height="14" Foreground="#60A5FA" Margin="0,0,4,0"/>
+                                                <TextBlock Text="انستا باي (ج.م)" Foreground="#CBD5E1" FontSize="13" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                            <TextBox Text="{Binding InstaPayPaid, UpdateSourceTrigger=PropertyChanged}"
+                                                     materialDesign:HintAssist.Hint="0"
+                                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                     Foreground="#60A5FA" Background="#1A2533" FontSize="13" FontWeight="Bold" Padding="6,4" TextAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <!-- Visa -->
+                                    <Border Grid.Column="4" Background="#162232" CornerRadius="6" Padding="8" BorderBrush="#2D3F55" BorderThickness="1">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                <materialDesign:PackIcon Kind="CreditCard" Width="14" Height="14" Foreground="#A78BFA" Margin="0,0,4,0"/>
+                                                <TextBlock Text="فيزا / بنك (ج.م)" Foreground="#CBD5E1" FontSize="13" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                            <TextBox Text="{Binding VisaPaid, UpdateSourceTrigger=PropertyChanged}"
+                                                     materialDesign:HintAssist.Hint="0"
+                                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                     Foreground="#A78BFA" Background="#1A2533" FontSize="13" FontWeight="Bold" Padding="6,4" TextAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <!-- Bank Transfer -->
+                                    <Border Grid.Column="6" Background="#162232" CornerRadius="6" Padding="8" BorderBrush="#2D3F55" BorderThickness="1">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                <materialDesign:PackIcon Kind="BankTransfer" Width="14" Height="14" Foreground="#F59E0B" Margin="0,0,4,0"/>
+                                                <TextBlock Text="تحويل بنكي (ج.م)" Foreground="#CBD5E1" FontSize="13" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                            <TextBox Text="{Binding BankTransferPaid, UpdateSourceTrigger=PropertyChanged}"
+                                                     materialDesign:HintAssist.Hint="0"
+                                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                     Foreground="#F59E0B" Background="#1A2533" FontSize="13" FontWeight="Bold" Padding="6,4" TextAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                                <!-- Housing quick buttons + totals -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="أزرار سريعة:" Foreground="#CBD5E1" FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <Button Command="{Binding PayAllCashCommand}" Content="سداد كامل كاش" Style="{StaticResource MaterialDesignOutlinedButton}" Foreground="#22C55E" BorderBrush="#22C55E" Padding="8,2" Height="30" Margin="0,0,4,0" FontSize="12"/>
+                                        <Button Command="{Binding PayAllInstaPayCommand}" Content="سداد كامل انستا باي" Style="{StaticResource MaterialDesignOutlinedButton}" Foreground="#60A5FA" BorderBrush="#60A5FA" Padding="8,2" Height="30" Margin="0,0,4,0" FontSize="12"/>
+                                        <Button Command="{Binding PayAllVisaCommand}" Content="سداد كامل فيزا" Style="{StaticResource MaterialDesignOutlinedButton}" Foreground="#A78BFA" BorderBrush="#A78BFA" Padding="8,2" Height="30" Margin="0,0,4,0" FontSize="12"/>
+                                        <Button Command="{Binding ClearPaymentsCommand}" Content="تصفير" Style="{StaticResource MaterialDesignOutlinedButton}" Foreground="#94A3B8" BorderBrush="#2D3F55" Padding="6,2" Height="30" FontSize="12"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="إجمالي المسدد:" Foreground="#CBD5E1" FontSize="13" Margin="0,0,4,0"/>
+                                        <TextBlock Text="{Binding TotalPaidAmount, StringFormat={}{0:N0} ج.م}" Foreground="#22C55E" FontWeight="Bold" FontSize="14" Margin="0,0,10,0"/>
+                                        <TextBlock Text="المتبقي:" Foreground="#CBD5E1" FontSize="13" Margin="0,0,4,0"/>
+                                        <TextBlock Text="{Binding RemainingPaymentAmount, StringFormat={}{0:N0} ج.م}" Foreground="#EF4444" FontWeight="Bold" FontSize="13.5"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ======= MEALS PAYMENT ======= -->
+                        <Border Background="#0D1B2A" CornerRadius="8" Padding="12" BorderBrush="#1E3A52" BorderThickness="1">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <materialDesign:PackIcon Kind="SilverwareForkKnife" Width="16" Height="16" Foreground="#22C55E" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="سداد الوجبات" FontSize="15" FontWeight="Bold" Foreground="#22C55E"/>
+                                    <TextBlock Text="{Binding MealsTotal, StringFormat={}  (المطلوب: {0:N0} ج.م)}" FontSize="13.5" Foreground="#CBD5E1" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="1*"/>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="1*"/>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="1*"/>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="1*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <!-- Meals Cash -->
+                                    <Border Grid.Column="0" Background="#162232" CornerRadius="6" Padding="8" BorderBrush="#2D3F55" BorderThickness="1">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                <materialDesign:PackIcon Kind="Cash" Width="14" Height="14" Foreground="#22C55E" Margin="0,0,4,0"/>
+                                                <TextBlock Text="كاش (ج.م)" Foreground="#CBD5E1" FontSize="13" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                            <TextBox Text="{Binding MealsCashPaid, UpdateSourceTrigger=PropertyChanged}"
+                                                     materialDesign:HintAssist.Hint="0"
+                                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                     Foreground="#22C55E" Background="#1A2533" FontSize="13" FontWeight="Bold" Padding="6,4" TextAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <!-- Meals InstaPay -->
+                                    <Border Grid.Column="2" Background="#162232" CornerRadius="6" Padding="8" BorderBrush="#2D3F55" BorderThickness="1">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                <materialDesign:PackIcon Kind="CellphoneCheck" Width="14" Height="14" Foreground="#60A5FA" Margin="0,0,4,0"/>
+                                                <TextBlock Text="انستا باي (ج.م)" Foreground="#CBD5E1" FontSize="13" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                            <TextBox Text="{Binding MealsInstaPayPaid, UpdateSourceTrigger=PropertyChanged}"
+                                                     materialDesign:HintAssist.Hint="0"
+                                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                     Foreground="#60A5FA" Background="#1A2533" FontSize="13" FontWeight="Bold" Padding="6,4" TextAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <!-- Meals Visa -->
+                                    <Border Grid.Column="4" Background="#162232" CornerRadius="6" Padding="8" BorderBrush="#2D3F55" BorderThickness="1">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                <materialDesign:PackIcon Kind="CreditCard" Width="14" Height="14" Foreground="#A78BFA" Margin="0,0,4,0"/>
+                                                <TextBlock Text="فيزا / بنك (ج.م)" Foreground="#CBD5E1" FontSize="13" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                            <TextBox Text="{Binding MealsVisaPaid, UpdateSourceTrigger=PropertyChanged}"
+                                                     materialDesign:HintAssist.Hint="0"
+                                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                     Foreground="#A78BFA" Background="#1A2533" FontSize="13" FontWeight="Bold" Padding="6,4" TextAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <!-- Meals Bank Transfer -->
+                                    <Border Grid.Column="6" Background="#162232" CornerRadius="6" Padding="8" BorderBrush="#2D3F55" BorderThickness="1">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                <materialDesign:PackIcon Kind="BankTransfer" Width="14" Height="14" Foreground="#F59E0B" Margin="0,0,4,0"/>
+                                                <TextBlock Text="تحويل بنكي (ج.م)" Foreground="#CBD5E1" FontSize="13" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                            <TextBox Text="{Binding MealsBankTransferPaid, UpdateSourceTrigger=PropertyChanged}"
+                                                     materialDesign:HintAssist.Hint="0"
+                                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                     Foreground="#F59E0B" Background="#1A2533" FontSize="13" FontWeight="Bold" Padding="6,4" TextAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                                <!-- Meals quick buttons + totals -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="أزرار سريعة:" Foreground="#CBD5E1" FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <Button Command="{Binding MealsPayAllCashCommand}" Content="سداد كامل كاش" Style="{StaticResource MaterialDesignOutlinedButton}" Foreground="#22C55E" BorderBrush="#22C55E" Padding="8,2" Height="30" Margin="0,0,4,0" FontSize="12"/>
+                                        <Button Command="{Binding MealsPayAllInstaPayCommand}" Content="سداد كامل انستا باي" Style="{StaticResource MaterialDesignOutlinedButton}" Foreground="#60A5FA" BorderBrush="#60A5FA" Padding="8,2" Height="30" Margin="0,0,4,0" FontSize="12"/>
+                                        <Button Command="{Binding MealsPayAllVisaCommand}" Content="سداد كامل فيزا" Style="{StaticResource MaterialDesignOutlinedButton}" Foreground="#A78BFA" BorderBrush="#A78BFA" Padding="8,2" Height="30" Margin="0,0,4,0" FontSize="12"/>
+                                        <Button Command="{Binding ClearMealsPaymentsCommand}" Content="تصفير" Style="{StaticResource MaterialDesignOutlinedButton}" Foreground="#94A3B8" BorderBrush="#2D3F55" Padding="6,2" Height="30" FontSize="12"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="إجمالي المسدد:" Foreground="#CBD5E1" FontSize="13" Margin="0,0,4,0"/>
+                                        <TextBlock Text="{Binding MealsTotalPaid, StringFormat={}{0:N0} ج.م}" Foreground="#22C55E" FontWeight="Bold" FontSize="14" Margin="0,0,10,0"/>
+                                        <TextBlock Text="المتبقي:" Foreground="#CBD5E1" FontSize="13" Margin="0,0,4,0"/>
+                                        <TextBlock Text="{Binding MealsRemainingAmount, StringFormat={}{0:N0} ج.م}" Foreground="#EF4444" FontWeight="Bold" FontSize="13.5"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+
+            <!-- ================= RIGHT COLUMN: Summary & Actions ================= -->
+            <StackPanel Grid.Column="2">
+                <Border Background="#0A1420" CornerRadius="12" Padding="18" BorderBrush="#1E2D3D" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="إجمالي وملخص الحجز" Foreground="#D4A017" FontWeight="Bold" FontSize="18" Margin="0,0,0,16"/>
+
+                        <!-- عدد الشاليهات -->
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="عدد الشاليهات:" Foreground="#94A3B8" FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding BookedChalets.Count, StringFormat={}{0} شاليه}" Foreground="#60A5FA" FontSize="15.5" FontWeight="Bold" Grid.Column="1"/>
+                        </Grid>
+
+                        <!-- عدد الأيام (أقصى فترة) -->
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="أيام الإقامة:" Foreground="#94A3B8" FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding NumberOfDays, StringFormat={}{0} يوم}" Foreground="#F0F4F8" FontSize="15.5" FontWeight="Bold" Grid.Column="1"/>
+                        </Grid>
+
+                        <!-- إجمالي السكن -->
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="إجمالي السكن:" Foreground="#94A3B8" FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding ChaletTotal, StringFormat={}{0:N0} ج.م}" Foreground="#F0F4F8" FontSize="17" FontWeight="Bold" Grid.Column="1"/>
+                        </Grid>
+
+                        <!-- خصم مقدم (ديبوزت) لجميع الشاليهات -->
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="خصم مقدم (ديبوزت):" Foreground="#94A3B8" FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Deposit, StringFormat={}-{0:N0} ج.م}" Foreground="#EF4444" FontSize="17" FontWeight="Bold" Grid.Column="1"/>
+                        </Grid>
+
+                        <!-- السكن المتبقي -->
+                        <Grid Margin="0,0,0,12" Background="#0D1E2E">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="  السكن المتبقي:" Foreground="#60A5FA" FontSize="13" FontWeight="SemiBold" Grid.Column="0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding HousingAfterDeposit, StringFormat={}{0:N0} ج.م}" Foreground="#60A5FA" FontSize="17" FontWeight="Bold" Grid.Column="1" Margin="6,6"/>
+                        </Grid>
+
+                        <Separator Background="#2D3F55" Margin="0,0,0,12"/>
+
+                        <!-- إجمالي الوجبات -->
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="إجمالي الوجبات:" Foreground="#94A3B8" FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding MealsTotal, StringFormat={}{0:N0} ج.م}" Foreground="#22C55E" FontSize="17" FontWeight="Bold" Grid.Column="1"/>
+                        </Grid>
+
+                        <!-- خدمات إضافية -->
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="خدمات إضافية:" Foreground="#94A3B8" FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding ExtraServices, StringFormat={}{0:N0} ج.م}" Foreground="#F0F4F8" FontSize="15.5" FontWeight="Bold" Grid.Column="1"/>
+                        </Grid>
+
+                        <!-- التأمين -->
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="التأمين المسترد:" Foreground="#94A3B8" FontSize="14" VerticalAlignment="Center" Grid.ColumnSpan="2"/>
+                            <TextBlock Text="{Binding Insurance, StringFormat={}{0:N0} ج.م}" Foreground="#F59E0B" FontSize="15.5" FontWeight="Bold" Grid.Column="1"/>
+                        </Grid>
+
+                        <Separator Background="#2D3F55" Margin="0,0,0,12"/>
+
+                        <!-- الإجمالي المتبقي (بدون تأمين) -->
+                        <Border Background="#1A2533" CornerRadius="8" Padding="12,10" Margin="0,0,0,8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="المتبقي (بدون تأمين):" Foreground="#CBD5E1" FontSize="13.5" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding TotalAfterDepositWithoutInsurance, StringFormat={}{0:N0} ج.م}" Foreground="#60A5FA" FontSize="16" FontWeight="Bold" Grid.Column="1"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- الإجمالي المتبقي (بالتأمين) -->
+                        <Border Background="#1E2A1A" CornerRadius="8" Padding="12,10" Margin="0,0,0,16" BorderBrush="#22C55E" BorderThickness="1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="الإجمالي للسداد (بالتأمين):" Foreground="#22C55E" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding TotalAfterDeposit, StringFormat={}{0:N0} ج.م}" Foreground="#22C55E" FontSize="18" FontWeight="Bold" Grid.Column="1"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- Status Message -->
+                        <TextBlock Text="{Binding StatusMessage}" Foreground="#D4A017" FontSize="14" TextWrapping="Wrap" Margin="0,0,0,12" HorizontalAlignment="Center"/>
+
+                        <!-- Receptionist Selector -->
+                        <Border Background="#162232" CornerRadius="8" Padding="10" Margin="0,0,0,12" BorderBrush="#2D3F55" BorderThickness="1">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <materialDesign:PackIcon Kind="AccountBadge" Width="16" Height="16" Foreground="#D4A017" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <ComboBox ItemsSource="{Binding ReceptionistList}"
+                                          SelectedItem="{Binding ReceptionistName}"
+                                          IsEditable="True"
+                                          materialDesign:HintAssist.Hint="اختر مسؤول الاستقبال..."
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                          Foreground="#F0F4F8" Background="#1A2533" FontSize="14" Padding="10,7"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Action Buttons -->
+                        <Button Command="{Binding SaveBookingCommand}" Style="{StaticResource GoldButton}" Margin="0,0,0,10" Height="45">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="ContentSaveCheck" Width="20" Height="20" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="حفظ وطباعة الفاتورة" FontSize="17" FontWeight="Bold"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Command="{Binding ClearFormCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Foreground="#94A3B8" BorderBrush="#2D3F55" Height="36">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="Refresh" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="تفريغ الحقول (حجز جديد)"/>
+                            </StackPanel>
+                        </Button>
+
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+        </Grid>
+    </ScrollViewer>
+</Page>

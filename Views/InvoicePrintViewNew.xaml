@@ -1,0 +1,619 @@
+<UserControl x:Class="EaglesResort.Views.InvoicePrintViewNew"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="White" Foreground="Black"
+             FlowDirection="RightToLeft" FontFamily="Calibri">
+
+    <!--
+        خصائص جديدة مطلوبة في الـ ViewModel (باقي الخصائص هي نفسها القديمة):
+          MealDays         : عدد أيام الوجبات (4 في المثال)
+          ChaletRemaining  : المتبقي من الشاليه بعد المقدم (15,000)
+          InvoiceTotal     : إجمالي الفاتورة (26,400)
+          HasExtraServices : bool - لإظهار صف الخدمات الإضافية فقط لو فيه خدمات
+    -->
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="B2V"/>
+
+        <SolidColorBrush x:Key="Line"    Color="#3C3C3C"/>
+        <SolidColorBrush x:Key="DarkBg"  Color="#1F1F1F"/>
+        <SolidColorBrush x:Key="LabelBg" Color="#DCDCDC"/>
+        <SolidColorBrush x:Key="NaBg"    Color="#C6C6C6"/>
+        <SolidColorBrush x:Key="BarBg"   Color="#BDBDBD"/>
+
+        <!-- ===== Cells (نفس حيلة الحدود القديمة: 0,0,1,1 للخلايا و 1,1,0,0 للإطار الخارجي) ===== -->
+        <Style x:Key="Cell" TargetType="Border">
+            <Setter Property="BorderBrush" Value="{StaticResource Line}"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+            <Setter Property="Padding" Value="4,3"/>
+            <Setter Property="MinHeight" Value="26"/>
+        </Style>
+        <Style x:Key="LabelCell" TargetType="Border" BasedOn="{StaticResource Cell}">
+            <Setter Property="Background" Value="{StaticResource LabelBg}"/>
+        </Style>
+        <Style x:Key="NaCell" TargetType="Border" BasedOn="{StaticResource Cell}">
+            <Setter Property="Background" Value="{StaticResource NaBg}"/>
+        </Style>
+        <Style x:Key="HeadCell" TargetType="Border" BasedOn="{StaticResource Cell}">
+            <Setter Property="Background" Value="{StaticResource DarkBg}"/>
+        </Style>
+
+        <!-- ===== Text ===== -->
+        <Style x:Key="Txt" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="TxtB" TargetType="TextBlock" BasedOn="{StaticResource Txt}">
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+        <Style x:Key="TxtH" TargetType="TextBlock" BasedOn="{StaticResource Txt}">
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style x:Key="Sig" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="0,3,0,0"/>
+        </Style>
+        <Style x:Key="SigTitle" TargetType="TextBlock" BasedOn="{StaticResource Sig}">
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+
+        <!-- ================= بيانات النزيل (مشتركة بين النسختين) ================= -->
+        <DataTemplate x:Key="GuestSectionTpl">
+            <StackPanel>
+                <Grid Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="0.46*"/>
+                        <ColumnDefinition Width="0.54*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" Background="{StaticResource BarBg}" Padding="8,2">
+                        <Grid>
+                            <TextBlock Text="&#x1F464;" FontFamily="Segoe UI Symbol" FontSize="16" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                            <TextBlock Text="بيانات النزيل" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <Border BorderBrush="{StaticResource Line}" BorderThickness="1,1,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.1*"/>
+                            <ColumnDefinition Width="2.3*"/>
+                            <ColumnDefinition Width="1.1*"/>
+                            <ColumnDefinition Width="1.4*"/>
+                            <ColumnDefinition Width="1.6*"/>
+                            <ColumnDefinition Width="1.1*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Row 0 -->
+                        <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource LabelCell}">
+                            <TextBlock Text="اسم النزيل" Style="{StaticResource TxtB}"/>
+                        </Border>
+                        <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource Cell}">
+                            <TextBlock Text="{Binding GuestName, Mode=OneWay}" Style="{StaticResource Txt}"/>
+                        </Border>
+                        <Border Grid.Row="0" Grid.Column="2" Style="{StaticResource LabelCell}">
+                            <TextBlock Text="مقدم الحجز" Style="{StaticResource TxtB}"/>
+                        </Border>
+                        <Border Grid.Row="0" Grid.Column="3" Style="{StaticResource Cell}">
+                            <TextBlock Style="{StaticResource Txt}" FlowDirection="LeftToRight"><Run Text="EGP "/><Run Text="{Binding DepositFormatted, Mode=OneWay}"/></TextBlock>
+                        </Border>
+                        <Border Grid.Row="0" Grid.Column="4" Style="{StaticResource LabelCell}">
+                            <TextBlock Text="عضوية المصايف (خاص ق ج)" Style="{StaticResource TxtB}" FontSize="10" TextWrapping="Wrap"/>
+                        </Border>
+                        <Border Grid.Row="0" Grid.Column="5" Style="{StaticResource Cell}">
+                            <TextBlock Text="{Binding MembershipNumber, Mode=OneWay}" Style="{StaticResource Txt}"/>
+                        </Border>
+
+                        <!-- Row 1 -->
+                        <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource LabelCell}">
+                            <TextBlock Text="رقم الموبايل" Style="{StaticResource TxtB}"/>
+                        </Border>
+                        <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource Cell}">
+                            <TextBlock Text="{Binding PhoneNumber, Mode=OneWay}" Style="{StaticResource Txt}" FlowDirection="LeftToRight"/>
+                        </Border>
+                        <Border Grid.Row="1" Grid.Column="2" Style="{StaticResource LabelCell}">
+                            <TextBlock Text="تاريخ الحجز" Style="{StaticResource TxtB}"/>
+                        </Border>
+                        <Border Grid.Row="1" Grid.Column="3" Style="{StaticResource Cell}">
+                            <TextBlock Text="{Binding DepositDate, Mode=OneWay}" Style="{StaticResource Txt}" FlowDirection="LeftToRight"/>
+                        </Border>
+                        <Border Grid.Row="1" Grid.Column="4" Style="{StaticResource LabelCell}">
+                            <TextBlock Text="رقم الشالية" Style="{StaticResource TxtB}"/>
+                        </Border>
+                        <Border Grid.Row="1" Grid.Column="5" Style="{StaticResource Cell}">
+                            <TextBlock Text="{Binding ChaletInfo, Mode=OneWay}" Style="{StaticResource Txt}" FlowDirection="LeftToRight"/>
+                        </Border>
+
+                        <!-- Row 2 -->
+                        <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource LabelCell}">
+                            <TextBlock Text="عدد الأفراد" Style="{StaticResource TxtB}"/>
+                        </Border>
+                        <Border Grid.Row="2" Grid.Column="1" Style="{StaticResource Cell}">
+                            <TextBlock Text="{Binding PersonsCount, Mode=OneWay}" Style="{StaticResource Txt}"/>
+                        </Border>
+                        <Border Grid.Row="2" Grid.Column="2" Style="{StaticResource LabelCell}">
+                            <TextBlock Text="تاريخ الوصول" Style="{StaticResource TxtB}"/>
+                        </Border>
+                        <Border Grid.Row="2" Grid.Column="3" Style="{StaticResource Cell}">
+                            <TextBlock Text="{Binding CheckInDate, Mode=OneWay}" Style="{StaticResource Txt}" FlowDirection="LeftToRight"/>
+                        </Border>
+                        <Border Grid.Row="2" Grid.Column="4" Style="{StaticResource LabelCell}">
+                            <TextBlock Text="تاريخ المغادرة" Style="{StaticResource TxtB}"/>
+                        </Border>
+                        <Border Grid.Row="2" Grid.Column="5" Style="{StaticResource Cell}">
+                            <TextBlock Text="{Binding CheckOutDate, Mode=OneWay}" Style="{StaticResource Txt}" FlowDirection="LeftToRight"/>
+                        </Border>
+                    </Grid>
+                </Border>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- ================= بيانات الإسكان (مشتركة بين النسختين) ================= -->
+        <DataTemplate x:Key="HousingSectionTpl">
+            <StackPanel Margin="0,8,0,0">
+                <Grid Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="0.46*"/>
+                        <ColumnDefinition Width="0.54*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" Background="{StaticResource BarBg}" Padding="8,2">
+                        <Grid>
+                            <TextBlock Text="&#x1F6CF;" FontFamily="Segoe UI Symbol" FontSize="16" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                            <TextBlock Text="بيانات الإسكان" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <Border BorderBrush="{StaticResource Line}" BorderThickness="1,1,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="1.2*"/>
+                            <ColumnDefinition Width="1.3*"/>
+                            <ColumnDefinition Width="1.2*"/>
+                            <ColumnDefinition Width="1.2*"/>
+                            <ColumnDefinition Width="1.6*"/>
+                            <ColumnDefinition Width="1.5*"/>
+                            <ColumnDefinition Width="1.7*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Headers -->
+                        <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource HeadCell}">
+                            <TextBlock Text="بيانات الإسكان" Style="{StaticResource TxtH}"/>
+                        </Border>
+                        <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource HeadCell}">
+                            <TextBlock Text="العدد / الأيام" Style="{StaticResource TxtH}"/>
+                        </Border>
+                        <Border Grid.Row="0" Grid.Column="2" Style="{StaticResource HeadCell}">
+                            <TextBlock Text="السعر اليومي" Style="{StaticResource TxtH}"/>
+                        </Border>
+                        <Border Grid.Row="0" Grid.Column="3" Style="{StaticResource HeadCell}">
+                            <TextBlock Text="عدد الوجبات" Style="{StaticResource TxtH}"/>
+                        </Border>
+                        <Border Grid.Row="0" Grid.Column="4" Style="{StaticResource HeadCell}">
+                            <TextBlock Text="سعر الوجبة" Style="{StaticResource TxtH}"/>
+                        </Border>
+                        <Border Grid.Row="0" Grid.Column="5" Style="{StaticResource HeadCell}">
+                            <TextBlock Text="الإجمالي" Style="{StaticResource TxtH}"/>
+                        </Border>
+                        <Border Grid.Row="0" Grid.Column="6" Style="{StaticResource HeadCell}">
+                            <TextBlock Text="مقدم الحجز" Style="{StaticResource TxtH}"/>
+                        </Border>
+                        <Border Grid.Row="0" Grid.Column="7" Style="{StaticResource HeadCell}">
+                            <TextBlock Text="المتبقي (المطلوب)" Style="{StaticResource TxtH}"/>
+                        </Border>
+
+                        <!-- Row 1: Chalet -->
+                        <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource Cell}">
+                            <TextBlock Style="{StaticResource TxtB}"><Run Text="شالية "/><Run Text="{Binding ChaletInfo, Mode=OneWay}"/></TextBlock>
+                        </Border>
+                        <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource Cell}">
+                            <TextBlock Text="{Binding Days, Mode=OneWay}" Style="{StaticResource Txt}"/>
+                        </Border>
+                        <Border Grid.Row="1" Grid.Column="2" Style="{StaticResource Cell}">
+                            <TextBlock Text="{Binding DailyRate, Mode=OneWay}" Style="{StaticResource Txt}"/>
+                        </Border>
+                        <Border Grid.Row="1" Grid.Column="3" Style="{StaticResource NaCell}">
+                            <TextBlock Text="-" Style="{StaticResource Txt}"/>
+                        </Border>
+                        <Border Grid.Row="1" Grid.Column="4" Style="{StaticResource NaCell}">
+                            <TextBlock Text="-" Style="{StaticResource Txt}"/>
+                        </Border>
+                        <Border Grid.Row="1" Grid.Column="5" Style="{StaticResource Cell}">
+                            <TextBlock Text="{Binding ChaletTotal, Mode=OneWay}" Style="{StaticResource Txt}"/>
+                        </Border>
+                        <Border Grid.Row="1" Grid.Column="6" Style="{StaticResource Cell}">
+                            <TextBlock Text="{Binding DepositFormatted, Mode=OneWay}" Style="{StaticResource Txt}"/>
+                        </Border>
+                        <Border Grid.Row="1" Grid.Column="7" Style="{StaticResource Cell}">
+                            <TextBlock Text="{Binding ChaletRemaining, Mode=OneWay}" Style="{StaticResource TxtB}"/>
+                        </Border>
+
+                        <!-- Row 2: Adult meals -->
+                        <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource Cell}">
+                            <TextBlock Text="وجبات البالغين" Style="{StaticResource TxtB}"/>
+                        </Border>
+                        <Border Grid.Row="2" Grid.Column="1" Style="{StaticResource Cell}">
+                            <TextBlock Text="{Binding MealDays, Mode=OneWay}" Style="{StaticResource Txt}"/>
+                        </Border>
+                        <Border Grid.Row="2" Grid.Column="2" Style="{StaticResource NaCell}">
+                            <TextBlock Text="-" Style="{StaticResource Txt}"/>
+                        </Border>
+                        <Border Grid.Row="2" Grid.Column="3" Style="{StaticResource Cell}">
+                            <TextBlock Text="{Binding AdultMealsCount, Mode=OneWay}" Style="{StaticResource Txt}"/>
+                        </Border>
+                        <Border Grid.Row="2" Grid.Column="4" Style="{StaticResource Cell}">
+                            <TextBlock Text="{Binding AdultMealRate, Mode=OneWay}" Style="{StaticResource Txt}"/>
+                        </Border>
+                        <Border Grid.Row="2" Grid.Column="5" Style="{StaticResource Cell}">
+                            <TextBlock Text="{Binding AdultMealsTotal, Mode=OneWay}" Style="{StaticResource Txt}"/>
+                        </Border>
+                        <Border Grid.Row="2" Grid.Column="6" Style="{StaticResource NaCell}">
+                            <TextBlock Text="-" Style="{StaticResource Txt}"/>
+                        </Border>
+                        <Border Grid.Row="2" Grid.Column="7" Style="{StaticResource Cell}">
+                            <TextBlock Text="{Binding AdultMealsTotal, Mode=OneWay}" Style="{StaticResource TxtB}"/>
+                        </Border>
+
+                        <!-- Row 3: Child meals -->
+                        <Border Grid.Row="3" Grid.Column="0" Style="{StaticResource Cell}">
+                            <TextBlock Text="وجبات الأطفال" Style="{StaticResource TxtB}"/>
+                        </Border>
+                        <Border Grid.Row="3" Grid.Column="1" Style="{StaticResource Cell}">
+                            <TextBlock Text="{Binding MealDays, Mode=OneWay}" Style="{StaticResource Txt}"/>
+                        </Border>
+                        <Border Grid.Row="3" Grid.Column="2" Style="{StaticResource NaCell}">
+                            <TextBlock Text="-" Style="{StaticResource Txt}"/>
+                        </Border>
+                        <Border Grid.Row="3" Grid.Column="3" Style="{StaticResource Cell}">
+                            <TextBlock Text="{Binding ChildMealsCount, Mode=OneWay}" Style="{StaticResource Txt}"/>
+                        </Border>
+                        <Border Grid.Row="3" Grid.Column="4" Style="{StaticResource Cell}">
+                            <TextBlock Text="{Binding ChildMealRate, Mode=OneWay}" Style="{StaticResource Txt}"/>
+                        </Border>
+                        <Border Grid.Row="3" Grid.Column="5" Style="{StaticResource Cell}">
+                            <TextBlock Text="{Binding ChildMealsTotal, Mode=OneWay}" Style="{StaticResource Txt}"/>
+                        </Border>
+                        <Border Grid.Row="3" Grid.Column="6" Style="{StaticResource NaCell}">
+                            <TextBlock Text="-" Style="{StaticResource Txt}"/>
+                        </Border>
+                        <Border Grid.Row="3" Grid.Column="7" Style="{StaticResource Cell}">
+                            <TextBlock Text="{Binding ChildMealsTotal, Mode=OneWay}" Style="{StaticResource TxtB}"/>
+                        </Border>
+
+                        <!-- Row 4: Extra services (يظهر فقط لو فيه خدمات إضافية) -->
+                        <Border Grid.Row="4" Grid.Column="0" Style="{StaticResource Cell}" Visibility="{Binding HasExtraServices, Converter={StaticResource B2V}}">
+                            <TextBlock Text="خدمات إضافية" Style="{StaticResource TxtB}"/>
+                        </Border>
+                        <Border Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="4" Style="{StaticResource NaCell}" Visibility="{Binding HasExtraServices, Converter={StaticResource B2V}}">
+                            <TextBlock Text="-" Style="{StaticResource Txt}"/>
+                        </Border>
+                        <Border Grid.Row="4" Grid.Column="5" Style="{StaticResource Cell}" Visibility="{Binding HasExtraServices, Converter={StaticResource B2V}}">
+                            <TextBlock Text="{Binding ExtraServicesFormatted, Mode=OneWay}" Style="{StaticResource Txt}"/>
+                        </Border>
+                        <Border Grid.Row="4" Grid.Column="6" Style="{StaticResource NaCell}" Visibility="{Binding HasExtraServices, Converter={StaticResource B2V}}">
+                            <TextBlock Text="-" Style="{StaticResource Txt}"/>
+                        </Border>
+                        <Border Grid.Row="4" Grid.Column="7" Style="{StaticResource Cell}" Visibility="{Binding HasExtraServices, Converter={StaticResource B2V}}">
+                            <TextBlock Text="{Binding ExtraServicesFormatted, Mode=OneWay}" Style="{StaticResource TxtB}"/>
+                        </Border>
+                    </Grid>
+                </Border>
+            </StackPanel>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Viewbox Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Top">
+        <StackPanel Width="780">
+
+            <!-- ═════════════════════ COPY 1: نسخة النزيل ═════════════════════ -->
+            <StackPanel Margin="22,10,22,6">
+
+                <!-- HEADER -->
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="170"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="110"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" VerticalAlignment="Top">
+                        <TextBlock Text="فــاتــورة" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"/>
+                        <TextBlock Text="INVOICE" FontSize="16" FontWeight="Bold" FontFamily="Arial" HorizontalAlignment="Center"/>
+                        <TextBlock Text="(نسخة النزيل)" FontSize="10" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding FullInvoiceDate, Mode=OneWay}" FontSize="10" Foreground="#444" HorizontalAlignment="Center" Margin="0,4,0,0" FlowDirection="LeftToRight"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <TextBlock Text="EAGLES   RESORT   MATROUH" FontFamily="Cambria" FontSize="17" FontWeight="Bold" HorizontalAlignment="Center" FlowDirection="LeftToRight"/>
+                        <TextBlock FontSize="11" HorizontalAlignment="Center" Margin="0,3,0,0">
+                            <Run Text="&#x1F4CD; " FontFamily="Segoe UI Symbol"/><Run Text="طريق الغرام - أمام صخرة كليوباترا بجوار نادي هليوبلس."/>
+                        </TextBlock>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,0" FlowDirection="LeftToRight">
+                            <TextBlock Text="&#x260E; " FontFamily="Segoe UI Symbol" FontSize="13"/>
+                            <TextBlock Text="0155 149 9661" FontSize="12" Margin="0,0,18,0"/>
+                            <TextBlock Text="&#x1F4AC; " FontFamily="Segoe UI Symbol" FontSize="13"/>
+                            <TextBlock Text="0109 332 8260" FontSize="12"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Image Grid.Column="2" Source="/Assets/logo_dark.png" Width="95" Height="75" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Grid>
+
+                <!-- GUEST + HOUSING -->
+                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GuestSectionTpl}"/>
+                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource HousingSectionTpl}"/>
+
+                <!-- NOTES + TOTALS -->
+                <Grid Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1.15*"/>
+                        <ColumnDefinition Width="0.45*"/>
+                        <ColumnDefinition Width="1.2*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Notes (يمين) -->
+                    <StackPanel Grid.Column="0" VerticalAlignment="Top">
+                        <Border Background="{StaticResource DarkBg}" HorizontalAlignment="Left" Padding="14,1">
+                            <TextBlock Text="NOTES  &#x00AB;" Foreground="White" FontWeight="Bold" FontSize="11" FontFamily="Arial" FlowDirection="LeftToRight"/>
+                        </Border>
+                        <Border Background="#DCDCDC" Padding="8,5">
+                            <TextBlock FontSize="11" FontWeight="Bold" TextWrapping="Wrap" LineHeight="16">
+                                <Run Text="{Binding RestaurantTerms, Mode=OneWay}"/><LineBreak/>
+                                <Run Text="- الرجاء من السادة النزلاء الالتزام بمواعيد المطعم."/><LineBreak/>
+                                <Run Text="- المطعم غير مسئول في حالة التأخير عن المواعيد المحددة."/>
+                            </TextBlock>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Totals (يسار) -->
+                    <Grid Grid.Column="2" VerticalAlignment="Top">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="95"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="إجمالي الفاتورة" FontWeight="Bold" FontSize="13" Margin="6,3"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" FontSize="13" HorizontalAlignment="Center" Margin="0,3" FlowDirection="LeftToRight"><Run Text="EGP "/><Run Text="{Binding InvoiceTotal, Mode=OneWay}"/></TextBlock>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="(+) تأمين الشالية" FontWeight="Bold" FontSize="13" Margin="6,3"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" FontSize="13" HorizontalAlignment="Center" Margin="0,3" FlowDirection="LeftToRight"><Run Text="EGP "/><Run Text="{Binding InsuranceFormatted, Mode=OneWay}"/></TextBlock>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="(-) مقدم الحجز" FontSize="13" Foreground="#555" Margin="6,3"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" FontSize="13" Foreground="#555" HorizontalAlignment="Center" Margin="0,3" FlowDirection="LeftToRight"><Run Text="EGP "/><Run Text="{Binding DepositFormatted, Mode=OneWay}"/></TextBlock>
+
+                        <Border Grid.Row="3" Grid.Column="0" Style="{StaticResource Cell}" Background="{StaticResource NaBg}" Margin="0,4,0,0">
+                            <TextBlock Text="إجمالي المتبقي (شامل التأمين)" Style="{StaticResource TxtB}" FontSize="13"/>
+                        </Border>
+                        <Border Grid.Row="3" Grid.Column="1" Style="{StaticResource Cell}" Background="{StaticResource NaBg}" Margin="0,4,0,0">
+                            <TextBlock Style="{StaticResource TxtB}" FontSize="13" FlowDirection="LeftToRight"><Run Text="EGP "/><Run Text="{Binding TotalAfterDeposit, Mode=OneWay}"/></TextBlock>
+                        </Border>
+                    </Grid>
+                </Grid>
+
+                <!-- SIGNATURES -->
+                <Grid Margin="0,22,0,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="مسئول الاستقبال" Style="{StaticResource SigTitle}"/>
+                        <TextBlock Style="{StaticResource Sig}"><Run Text="الاسم: "/><Run Text="{Binding ReceptionistName, Mode=OneWay}"/></TextBlock>
+                        <TextBlock Text="التوقيع:" Style="{StaticResource Sig}"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="اسم وتوقيع النزيل" Style="{StaticResource SigTitle}"/>
+                        <TextBlock Text="الاسم:" Style="{StaticResource Sig}"/>
+                        <TextBlock Text="التوقيع:" Style="{StaticResource Sig}"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+
+            <!-- فاصل بين النسختين -->
+            <Border Height="1" Background="#555" Margin="15,4"/>
+
+            <!-- ═════════════════════ COPY 2: نسخة الحسابات ═════════════════════ -->
+            <StackPanel Margin="22,6,22,10">
+
+                <!-- HEADER -->
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="170"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="110"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" VerticalAlignment="Top">
+                        <TextBlock Text="فــاتــورة" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"/>
+                        <TextBlock Text="INVOICE" FontSize="16" FontWeight="Bold" FontFamily="Arial" HorizontalAlignment="Center"/>
+                        <TextBlock Text="(نسخة الحسابات)" FontSize="10" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding FullInvoiceDate, Mode=OneWay}" FontSize="10" Foreground="#444" HorizontalAlignment="Center" Margin="0,4,0,0" FlowDirection="LeftToRight"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <TextBlock Text="EAGLES   RESORT   MATROUH" FontFamily="Cambria" FontSize="17" FontWeight="Bold" HorizontalAlignment="Center" FlowDirection="LeftToRight"/>
+                        <TextBlock FontSize="11" HorizontalAlignment="Center" Margin="0,3,0,0">
+                            <Run Text="&#x1F4CD; " FontFamily="Segoe UI Symbol"/><Run Text="طريق الغرام - أمام صخرة كليوباترا بجوار نادي هليوبلس."/>
+                        </TextBlock>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,0" FlowDirection="LeftToRight">
+                            <TextBlock Text="&#x260E; " FontFamily="Segoe UI Symbol" FontSize="13"/>
+                            <TextBlock Text="0155 149 9661" FontSize="12" Margin="0,0,18,0"/>
+                            <TextBlock Text="&#x1F4AC; " FontFamily="Segoe UI Symbol" FontSize="13"/>
+                            <TextBlock Text="0109 332 8260" FontSize="12"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Image Grid.Column="2" Source="/Assets/logo_dark.png" Width="95" Height="75" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Grid>
+
+                <!-- GUEST + HOUSING -->
+                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GuestSectionTpl}"/>
+                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource HousingSectionTpl}"/>
+
+                <!-- PAYMENT METHOD + TOTALS -->
+                <Grid Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1.15*"/>
+                        <ColumnDefinition Width="0.45*"/>
+                        <ColumnDefinition Width="1.2*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- جدول طريقة الدفع (يمين) -->
+                    <Border Grid.Column="0" BorderBrush="{StaticResource Line}" BorderThickness="1,1,0,0" VerticalAlignment="Top">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.5*"/>
+                                <ColumnDefinition Width="1*"/>
+                                <ColumnDefinition Width="1*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="32"/>
+                                <RowDefinition Height="32"/>
+                                <RowDefinition Height="32"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource HeadCell}">
+                                <TextBlock Text="طريقة الدفع" Style="{StaticResource TxtH}"/>
+                            </Border>
+                            <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource LabelCell}">
+                                <TextBlock Text="إسكان" Style="{StaticResource TxtB}"/>
+                            </Border>
+                            <Border Grid.Row="0" Grid.Column="2" Style="{StaticResource LabelCell}">
+                                <TextBlock Text="وجبات" Style="{StaticResource TxtB}"/>
+                            </Border>
+
+                            <!-- لوجوهات الدفع: حط الصور في Assets وخليها Build Action = Resource -->
+                            <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource Cell}">
+                                <Image Source="/Assets/instapay.png" Height="43" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Width="50"/>
+                            </Border>
+                            <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource Cell}"/>
+                            <Border Grid.Row="1" Grid.Column="2" Style="{StaticResource Cell}"/>
+
+                            <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource Cell}">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" FlowDirection="LeftToRight">
+                                    <Image Source="/Assets/visa.png" Height="30" Stretch="Uniform" Margin="0,0,6,0" Width="30"/>
+                                    <Image Source="/Assets/mastercard.png" Height="30" Stretch="Uniform" Margin="0,0,6,0" Width="32"/>
+                                    <Image Source="/Assets/meeza.png" Height="33" Stretch="Uniform" Width="40" RenderTransformOrigin="0.599,0.123"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Row="2" Grid.Column="1" Style="{StaticResource Cell}"/>
+                            <Border Grid.Row="2" Grid.Column="2" Style="{StaticResource Cell}"/>
+
+                            <Border Grid.Row="3" Grid.Column="0" Style="{StaticResource Cell}">
+                                <TextBlock Text="CASH" Style="{StaticResource TxtB}" FontSize="13"/>
+                            </Border>
+                            <Border Grid.Row="3" Grid.Column="1" Style="{StaticResource Cell}"/>
+                            <Border Grid.Row="3" Grid.Column="2" Style="{StaticResource Cell}"/>
+
+                            <Border Grid.Row="4" Grid.Column="0" Style="{StaticResource LabelCell}">
+                                <TextBlock Text="الإجمالي" Style="{StaticResource TxtB}" FontSize="13"/>
+                            </Border>
+                            <Border Grid.Row="4" Grid.Column="1" Style="{StaticResource NaCell}">
+                                <TextBlock Text="{Binding ChaletTotal, Mode=OneWay}" Style="{StaticResource TxtB}" FontSize="13"/>
+                            </Border>
+                            <Border Grid.Row="4" Grid.Column="2" Style="{StaticResource NaCell}">
+                                <TextBlock Text="{Binding MealsTotalFormatted, Mode=OneWay}" Style="{StaticResource TxtB}" FontSize="13"/>
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <!-- Totals (يسار) -->
+                    <Grid Grid.Column="2" VerticalAlignment="Top">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="95"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="إجمالي الفاتورة" FontWeight="Bold" FontSize="13" Margin="6,3"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" FontSize="13" HorizontalAlignment="Center" Margin="0,3" FlowDirection="LeftToRight"><Run Text="EGP "/><Run Text="{Binding InvoiceTotal, Mode=OneWay}"/></TextBlock>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="(+) تأمين الشالية" FontWeight="Bold" FontSize="13" Margin="6,3"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" FontSize="13" HorizontalAlignment="Center" Margin="0,3" FlowDirection="LeftToRight"><Run Text="EGP "/><Run Text="{Binding InsuranceFormatted, Mode=OneWay}"/></TextBlock>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="(-) مقدم الحجز" FontSize="13" Foreground="#555" Margin="6,3"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" FontSize="13" Foreground="#555" HorizontalAlignment="Center" Margin="0,3" FlowDirection="LeftToRight"><Run Text="EGP "/><Run Text="{Binding DepositFormatted, Mode=OneWay}"/></TextBlock>
+
+                        <Border Grid.Row="3" Grid.Column="0" Style="{StaticResource Cell}" Background="{StaticResource NaBg}" Margin="0,4,0,0">
+                            <TextBlock Text="إجمالي المتبقي" Style="{StaticResource TxtB}" FontSize="13"/>
+                        </Border>
+                        <Border Grid.Row="3" Grid.Column="1" Style="{StaticResource Cell}" Background="{StaticResource NaBg}" Margin="0,4,0,0">
+                            <TextBlock Style="{StaticResource TxtB}" FontSize="13" FlowDirection="LeftToRight"><Run Text="EGP "/><Run Text="{Binding TotalAfterDeposit, Mode=OneWay}"/></TextBlock>
+                        </Border>
+                    </Grid>
+                </Grid>
+
+                <!-- SIGNATURES -->
+                <Grid Margin="0,22,0,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="مسئول الاستقبال" Style="{StaticResource SigTitle}"/>
+                        <TextBlock Style="{StaticResource Sig}"><Run Text="الاسم: "/><Run Text="{Binding ReceptionistName, Mode=OneWay}"/></TextBlock>
+                        <TextBlock Text="التوقيع:" Style="{StaticResource Sig}"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="اسم وتوقيع النزيل" Style="{StaticResource SigTitle}"/>
+                        <TextBlock Text="الاسم:" Style="{StaticResource Sig}"/>
+                        <TextBlock Text="التوقيع:" Style="{StaticResource Sig}"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="مسئول الحسابات" Style="{StaticResource SigTitle}"/>
+                        <TextBlock Style="{StaticResource Sig}"><Run Text="الاسم: "/><Run Text="{Binding AccountantName, Mode=OneWay}"/></TextBlock>
+                        <TextBlock Text="التوقيع:" Style="{StaticResource Sig}"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="3">
+                        <TextBlock Text="قائد المنتجع" Style="{StaticResource SigTitle}"/>
+                        <TextBlock Text="{Binding ResortManagerName, Mode=OneWay}" Style="{StaticResource Sig}" TextWrapping="Wrap"/>
+                        <TextBlock Text="التوقيع:" Style="{StaticResource Sig}"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+
+        </StackPanel>
+    </Viewbox>
+</UserControl>

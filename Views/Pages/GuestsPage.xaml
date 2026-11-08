@@ -1,0 +1,546 @@
+﻿<Page x:Class="EaglesResort.Views.Pages.GuestsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+      xmlns:helpers="clr-namespace:EaglesResort.Helpers"
+      Title="GuestsPage"
+      Background="#111E2B"
+      FlowDirection="RightToLeft"
+      UseLayoutRounding="True"
+      SnapsToDevicePixels="True"
+      TextOptions.TextFormattingMode="Display"
+      TextOptions.TextRenderingMode="ClearType"
+      RenderOptions.ClearTypeHint="Enabled"
+      FontFamily="Segoe UI, Tahoma, Arial">
+
+    <Page.Resources>
+        <helpers:BoolToVisibilityConverter x:Key="BoolToVis"/>
+        <helpers:BookingStatusToArabicConverter x:Key="BookingStatusArabic"/>
+        <helpers:BookingStatusToColorConverter x:Key="BookingStatusColor"/>
+    </Page.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="سجل النزلاء" FontSize="22" FontWeight="Bold" Foreground="#F0F4F8" VerticalAlignment="Center"/>
+            <TextBox Grid.Column="1"
+                     Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                     materialDesign:HintAssist.Hint="🔍 بحث بالاسم أو الهاتف أو الشاليه..."
+                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                     Foreground="#F0F4F8" Background="#1A2533"
+                     Width="260" Margin="0,0,12,0"/>
+            <Button Grid.Column="2" Command="{Binding ExportToExcelCommand}" Style="{StaticResource GoldButton}">
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="FileExcel" Width="16" Height="16" Margin="0,0,6,0"/>
+                    <TextBlock Text="تصدير إكسيل"/>
+                </StackPanel>
+            </Button>
+        </Grid>
+
+        <!-- Tabs -->
+        <TabControl Grid.Row="1" Background="Transparent" Foreground="#F0F4F8"
+                    Style="{StaticResource MaterialDesignTabControl}">
+            <TabControl.Resources>
+                <Style TargetType="TabItem" BasedOn="{StaticResource MaterialDesignTabItem}">
+                    <Setter Property="Foreground" Value="#94A3B8"/>
+                    <Setter Property="FontSize" Value="14"/>
+                    <Setter Property="Padding" Value="20,10"/>
+                </Style>
+            </TabControl.Resources>
+
+            <!-- ===== TAB 1: Active Guests ===== -->
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="AccountGroup" Width="18" Height="18" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="النزلاء الحاليين"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <Border Background="#1A2533" CornerRadius="0,8,8,8" Padding="0">
+                    <DataGrid x:Name="ActiveGrid"
+                              ItemsSource="{Binding ActiveGuests}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              IsReadOnly="False"
+                              Background="Transparent" BorderThickness="0"
+                              HeadersVisibility="Column"
+                              RowBackground="#1A2533" AlternatingRowBackground="#0F1923"
+                              Foreground="#F0F4F8" GridLinesVisibility="None"
+                              SelectionMode="Single"
+                              FontFamily="Calibri" FontSize="16"
+                              CellEditEnding="ActiveGrid_CellEditEnding">
+                        <DataGrid.Resources>
+                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource MaterialDesignDataGridColumnHeader}">
+                                <Setter Property="Background" Value="#243447"/>
+                                <Setter Property="Foreground" Value="#94A3B8"/>
+                                <Setter Property="Padding" Value="8,10,8,10"/>
+                                <Setter Property="MinHeight" Value="45"/>
+                                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                <Setter Property="BorderBrush" Value="#2D3F55"/>
+                            </Style>
+                            <Style TargetType="DataGridCell">
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="DataGridCell">
+                                            <Border Padding="6,5" Background="{TemplateBinding Background}">
+                                                <ContentPresenter VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <Trigger Property="IsEditing" Value="True">
+                                        <Setter Property="Background" Value="#243447"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.Resources>
+
+                        <DataGrid.Columns>
+
+                            <!-- 1. Row Number -->
+                            <DataGridTextColumn Header="#" Binding="{Binding RowNumber}" Width="40" IsReadOnly="True">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="#94A3B8"/>
+                                        <Setter Property="HorizontalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <!-- 2. Name -->
+                            <DataGridTemplateColumn Header="الاسم" Width="*">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                                <DataGridTemplateColumn.CellEditingTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding Booking.GuestName, UpdateSourceTrigger=PropertyChanged}"
+                                                 Background="Transparent" Foreground="White" BorderThickness="0" Padding="2"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellEditingTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- 2.5 Chalet -->
+                            <DataGridTemplateColumn Header="الشاليه" Width="105">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding ChaletNumber}" FontWeight="Bold" Foreground="#60A5FA" VerticalAlignment="Center"/>
+                                            <Border Background="#243447" CornerRadius="4" Padding="4,2" Margin="4,0,0,0"
+                                                    Visibility="{Binding IsMultiChalet, Converter={StaticResource BoolToVis}}"
+                                                    ToolTip="{Binding MultiBadgeText}">
+                                                <TextBlock Text="متعدد" FontSize="11" FontWeight="Bold" Foreground="#D4A017"/>
+                                            </Border>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- 3. Adults Count -->
+                            <DataGridTemplateColumn Header="بالغين" Width="65">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Booking.AdultCount}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   Foreground="#22C55E" FontWeight="Bold"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                                <DataGridTemplateColumn.CellEditingTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding Booking.AdultCount, UpdateSourceTrigger=PropertyChanged}"
+                                                 Background="Transparent" Foreground="White" BorderThickness="0" Padding="2" TextAlignment="Center"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellEditingTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- 4. Children Count -->
+                            <DataGridTemplateColumn Header="أطفال" Width="65">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Booking.ChildCount}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   Foreground="#F59E0B" FontWeight="Bold"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                                <DataGridTemplateColumn.CellEditingTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding Booking.ChildCount, UpdateSourceTrigger=PropertyChanged}"
+                                                 Background="Transparent" Foreground="White" BorderThickness="0" Padding="2" TextAlignment="Center"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellEditingTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- 5. Check-in Date (الوصول) -->
+                            <DataGridTemplateColumn Header="الوصول" Width="105">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Booking.CheckInDate, StringFormat=dd/MM/yyyy}" VerticalAlignment="Center"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                                <DataGridTemplateColumn.CellEditingTemplate>
+                                    <DataTemplate>
+                                        <DatePicker SelectedDate="{Binding Booking.CheckInDate, UpdateSourceTrigger=PropertyChanged}"
+                                                    Background="Transparent" Foreground="White" BorderThickness="0"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellEditingTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- 6. Check-out Date (المغادرة) -->
+                            <DataGridTemplateColumn Header="المغادرة" Width="105">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Booking.CheckOutDate, StringFormat=dd/MM/yyyy}" VerticalAlignment="Center"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                                <DataGridTemplateColumn.CellEditingTemplate>
+                                    <DataTemplate>
+                                        <DatePicker SelectedDate="{Binding Booking.CheckOutDate, UpdateSourceTrigger=PropertyChanged}"
+                                                    Background="Transparent" Foreground="White" BorderThickness="0"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellEditingTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- 7. Phone -->
+                            <DataGridTemplateColumn Header="الموبايل" Width="135">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Booking.PhoneNumber}" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Booking.SecondaryPhoneNumber, StringFormat=إضافي: \{0\}}"
+                                                       Foreground="#94A3B8" FontSize="11"
+                                                       Visibility="{Binding HasSecondaryPhone, Converter={StaticResource BoolToVis}}"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                                <DataGridTemplateColumn.CellEditingTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding Booking.PhoneNumber, UpdateSourceTrigger=PropertyChanged}"
+                                                 Background="Transparent" Foreground="White" BorderThickness="0" Padding="2"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellEditingTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- 8. Insurance Paid -->
+                            <DataGridTemplateColumn Header="دفع تأمين" Width="85">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding Booking.InsurancePaid, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
+                                                  Command="{Binding DataContext.ToggleInsurancePaidCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                                  CommandParameter="{Binding}"
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                  IsEnabled="True"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- 8.5 Insurance Amount -->
+                            <DataGridTemplateColumn Header="قيمة التأمين" Width="90">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Booking.Invoice.Insurance}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                                <DataGridTemplateColumn.CellEditingTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding Booking.Invoice.Insurance, UpdateSourceTrigger=PropertyChanged}"
+                                                 Background="Transparent" Foreground="White" BorderThickness="0" Padding="2" TextAlignment="Center"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellEditingTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- 9. Notes -->
+                            <DataGridTemplateColumn Header="ملاحظات" Width="150">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Booking.Notes}" VerticalAlignment="Center"
+                                                   Foreground="#F59E0B" TextWrapping="Wrap"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                                <DataGridTemplateColumn.CellEditingTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding Booking.Notes, UpdateSourceTrigger=PropertyChanged}"
+                                                 Background="Transparent" Foreground="White" BorderThickness="0"
+                                                 TextWrapping="Wrap" AcceptsReturn="True" Padding="2"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellEditingTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- 10. Actions -->
+                            <DataGridTemplateColumn Header="إجراءات" Width="250" IsReadOnly="True">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="2,2">
+                                            <Button Content="🚪 مغادرة"
+                                                    Command="{Binding DataContext.CheckoutCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                                    CommandParameter="{Binding}"
+                                                    Padding="6,3" Margin="0,0,4,0" FontSize="15">
+                                                <Button.Style>
+                                                    <Style TargetType="Button">
+                                                        <Setter Property="Background" Value="#DC2626"/>
+                                                        <Setter Property="Foreground" Value="White"/>
+                                                        <Setter Property="BorderThickness" Value="0"/>
+                                                        <Setter Property="Cursor" Value="Hand"/>
+                                                        <Setter Property="Template">
+                                                            <Setter.Value>
+                                                                <ControlTemplate TargetType="Button">
+                                                                    <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                    </Border>
+                                                                </ControlTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                        <Style.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter Property="Background" Value="#EF4444"/>
+                                                            </Trigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Button.Style>
+                                            </Button>
+                                            <Button Content="⏰ تمديد"
+                                                    Command="{Binding DataContext.ExtendStayCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                                    CommandParameter="{Binding}"
+                                                    Padding="6,3" FontSize="15" Margin="0,0,4,0">
+                                                <Button.Style>
+                                                    <Style TargetType="Button">
+                                                        <Setter Property="Background" Value="#1D4ED8"/>
+                                                        <Setter Property="Foreground" Value="White"/>
+                                                        <Setter Property="BorderThickness" Value="0"/>
+                                                        <Setter Property="Cursor" Value="Hand"/>
+                                                        <Setter Property="Template">
+                                                            <Setter.Value>
+                                                                <ControlTemplate TargetType="Button">
+                                                                    <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                    </Border>
+                                                                </ControlTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                        <Style.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter Property="Background" Value="#2563EB"/>
+                                                            </Trigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Button.Style>
+                                            </Button>
+                                            <Button Content="👁 عرض"
+                                                    Command="{Binding DataContext.ViewPaymentDetailsCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                                    CommandParameter="{Binding}"
+                                                    Padding="6,3" FontSize="15">
+                                                <Button.Style>
+                                                    <Style TargetType="Button">
+                                                        <Setter Property="Background" Value="#10B981"/>
+                                                        <Setter Property="Foreground" Value="White"/>
+                                                        <Setter Property="BorderThickness" Value="0"/>
+                                                        <Setter Property="Cursor" Value="Hand"/>
+                                                        <Setter Property="Template">
+                                                            <Setter.Value>
+                                                                <ControlTemplate TargetType="Button">
+                                                                    <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                    </Border>
+                                                                </ControlTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                        <Style.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter Property="Background" Value="#34D399"/>
+                                                            </Trigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Button.Style>
+                                            </Button>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+            </TabItem>
+
+            <!-- ===== TAB 2: Departed Guests ===== -->
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="AccountArrowRight" Width="18" Height="18" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="المغادرات"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <Border Background="#1A2533" CornerRadius="0,8,8,8" Padding="0">
+                    <DataGrid ItemsSource="{Binding DepartedGuests}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False" IsReadOnly="True"
+                              Background="Transparent" BorderThickness="0"
+                              HeadersVisibility="Column"
+                              RowBackground="#1A2533" AlternatingRowBackground="#0F1923"
+                              Foreground="#F0F4F8" GridLinesVisibility="None"
+                              FontFamily="Calibri" FontSize="16">
+                        <DataGrid.Resources>
+                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource MaterialDesignDataGridColumnHeader}">
+                                <Setter Property="Background" Value="#243447"/>
+                                <Setter Property="Foreground" Value="#94A3B8"/>
+                                <Setter Property="Padding" Value="8,10,8,10"/>
+                                <Setter Property="MinHeight" Value="45"/>
+                                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                <Setter Property="BorderBrush" Value="#2D3F55"/>
+                            </Style>
+                            <Style TargetType="DataGridCell">
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="DataGridCell">
+                                            <Border Padding="6,5" Background="{TemplateBinding Background}">
+                                                <ContentPresenter VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </DataGrid.Resources>
+                        <DataGrid.Columns>
+
+                            <DataGridTextColumn Header="#" Binding="{Binding RowNumber}" Width="40">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="#94A3B8"/>
+                                        <Setter Property="HorizontalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <DataGridTextColumn Header="الاسم" Binding="{Binding DisplayName}" Width="*"/>
+                            
+                            <DataGridTemplateColumn Header="الشاليه" Width="105">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding ChaletNumber}" FontWeight="Bold" Foreground="#60A5FA" VerticalAlignment="Center"/>
+                                            <Border Background="#243447" CornerRadius="4" Padding="4,2" Margin="4,0,0,0"
+                                                    Visibility="{Binding IsMultiChalet, Converter={StaticResource BoolToVis}}"
+                                                    ToolTip="{Binding MultiBadgeText}">
+                                                <TextBlock Text="متعدد" FontSize="11" FontWeight="Bold" Foreground="#D4A017"/>
+                                            </Border>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTextColumn Header="بالغين" Binding="{Binding Booking.AdultCount}" Width="65">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="HorizontalAlignment" Value="Center"/>
+                                        <Setter Property="Foreground" Value="#22C55E"/>
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <DataGridTextColumn Header="أطفال" Binding="{Binding Booking.ChildCount}" Width="65">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="HorizontalAlignment" Value="Center"/>
+                                        <Setter Property="Foreground" Value="#F59E0B"/>
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <DataGridTextColumn Header="الوصول" Binding="{Binding Booking.CheckInDate, StringFormat=dd/MM/yyyy}" Width="105"/>
+                            <DataGridTextColumn Header="المغادرة" Binding="{Binding Booking.CheckOutDate, StringFormat=dd/MM/yyyy}" Width="105"/>
+
+                            <DataGridTemplateColumn Header="الموبايل" Width="135">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Booking.PhoneNumber}" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Booking.SecondaryPhoneNumber, StringFormat=إضافي: \{0\}}"
+                                                       Foreground="#94A3B8" FontSize="11"
+                                                       Visibility="{Binding HasSecondaryPhone, Converter={StaticResource BoolToVis}}"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTextColumn Header="الأيام" Binding="{Binding Booking.NumberOfDays}" Width="60">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="HorizontalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <DataGridTextColumn Header="ملاحظات" Binding="{Binding Booking.Notes}" Width="150">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="#F59E0B"/>
+                                        <Setter Property="TextWrapping" Value="Wrap"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <DataGridTemplateColumn Header="إجراءات" Width="85" IsReadOnly="True">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="👁 عرض"
+                                                Command="{Binding DataContext.ViewPaymentDetailsCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                                CommandParameter="{Binding}"
+                                                Padding="6,3" FontSize="15" Margin="2">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Background" Value="#10B981"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                    <Setter Property="BorderThickness" Value="0"/>
+                                                    <Setter Property="Cursor" Value="Hand"/>
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                </Border>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Background" Value="#34D399"/>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+            </TabItem>
+
+        </TabControl>
+
+        <!-- Status Bar -->
+        <TextBlock Grid.Row="2" Text="{Binding StatusMessage}" Foreground="#22C55E"
+                   Margin="0,8,0,0" HorizontalAlignment="Right"/>
+    </Grid>
+</Page>

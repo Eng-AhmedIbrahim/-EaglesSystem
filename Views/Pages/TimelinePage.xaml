@@ -1,0 +1,693 @@
+<Page x:Class="EaglesResort.Views.Pages.TimelinePage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+      xmlns:vm="clr-namespace:EaglesResort.ViewModels"
+      xmlns:helpers="clr-namespace:EaglesResort.Helpers"
+      Title="TimelinePage"
+      Language="ar-EG"
+      Background="#111E2B"
+      FlowDirection="RightToLeft"
+      UseLayoutRounding="True"
+      SnapsToDevicePixels="True"
+      TextOptions.TextFormattingMode="Display"
+      TextOptions.TextRenderingMode="ClearType"
+      RenderOptions.ClearTypeHint="Enabled"
+      FontFamily="Segoe UI, Tahoma, Arial">
+
+    <Page.Resources>
+        <helpers:ChaletStatusToColorConverter x:Key="StatusColor"/>
+        <helpers:ChaletStatusToArabicConverter x:Key="StatusArabic"/>
+        <helpers:BookingStatusToArabicConverter x:Key="BookingStatusArabic"/>
+        <helpers:BookingStatusToColorConverter x:Key="BookingStatusColor"/>
+        <helpers:BoolToVisibilityConverter x:Key="BoolToVis"/>
+        <helpers:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis"/>
+    </Page.Resources>
+
+    <Grid Margin="16,10,16,10">
+        <Grid.RowDefinitions>
+            <!-- 0. Stats Cards -->
+            <RowDefinition Height="Auto"/>
+            <!-- 1. Controls: Types, Buildings, Floors & Months Filters -->
+            <RowDefinition Height="Auto"/>
+            <!-- 2. The Visual Monthly Grid -->
+            <RowDefinition Height="*"/>
+            <!-- 3. Bottom Summary Action Buttons -->
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ================= 0. STATS CARDS ================= -->
+        <Grid Grid.Row="0" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Style="{StaticResource StatCard}" Margin="0,0,6,0">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#1A2D3D" Offset="0"/>
+                        <GradientStop Color="#0F1B26" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <StackPanel>
+                    <TextBlock Text="إجمالي الشاليهات" FontSize="11.5" Foreground="#94A3B8"/>
+                    <TextBlock Text="{Binding TotalChalets}" FontSize="28" FontWeight="Bold" Foreground="#38BDF8"/>
+                    <TextBlock Text="شاليه مسجل" FontSize="11" Foreground="#64748B"/>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="1" Style="{StaticResource StatCard}" Margin="3,0">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#143322" Offset="0"/>
+                        <GradientStop Color="#0B2014" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <StackPanel>
+                    <TextBlock Text="الشاليهات المتاحة" FontSize="11.5" Foreground="#94A3B8"/>
+                    <TextBlock Text="{Binding AvailableCount}" FontSize="28" FontWeight="Bold" Foreground="#22C55E"/>
+                    <TextBlock Text="متاح للحجز الفوري" FontSize="11" Foreground="#4ADE80"/>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="2" Style="{StaticResource StatCard}" Margin="3,0">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#361717" Offset="0"/>
+                        <GradientStop Color="#220D0D" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <StackPanel>
+                    <TextBlock Text="الشاليهات المسكنة" FontSize="11.5" Foreground="#CBD5E1"/>
+                    <TextBlock Text="{Binding OccupiedCount}" FontSize="28" FontWeight="Bold" Foreground="#EF4444"/>
+                    <TextBlock Text="{Binding OccupancyPercentage, StringFormat=نسبة الإشغال: {0}}" FontSize="11" Foreground="#FCA5A5" FontWeight="SemiBold"/>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="3" Style="{StaticResource StatCard}" Margin="3,0">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#33250E" Offset="0"/>
+                        <GradientStop Color="#201708" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <StackPanel>
+                    <TextBlock Text="تحت الصيانة / نظافة" FontSize="11.5" Foreground="#94A3B8"/>
+                    <TextBlock Text="{Binding MaintenanceCount}" FontSize="28" FontWeight="Bold" Foreground="#F59E0B"/>
+                    <TextBlock Text="غير متاح حالياً" FontSize="11" Foreground="#FCD34D"/>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="4" Style="{StaticResource StatCard}" Margin="6,0,0,0">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#1A2035" Offset="0"/>
+                        <GradientStop Color="#101422" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <StackPanel>
+                    <TextBlock Text="مغادرات اليوم" FontSize="11.5" Foreground="#94A3B8"/>
+                    <TextBlock Text="{Binding TodayCheckouts.Count}" FontSize="28" FontWeight="Bold" Foreground="#818CF8"/>
+                    <TextBlock Text="تسليم وإخلاء" FontSize="11" Foreground="#A5B4FC"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- ================= 1. CONTROLS: CHALET TYPES, BUILDINGS, FLOORS & MONTHS ================= -->
+        <Border Grid.Row="1" Background="#162536" CornerRadius="12" Padding="14,10" Margin="0,0,0,10" BorderBrush="#2D3F55" BorderThickness="1">
+            <StackPanel>
+
+                <!-- Row A: Chalet Type Filter Buttons (STANDARD، PREMIUM، PLUS، DOUBLE، DELUXE) -->
+                <Grid Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Type Label -->
+                    <StackPanel Orientation="Horizontal" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <materialDesign:PackIcon Kind="FilterVariant" Width="20" Height="20" Foreground="#D4A017" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="فئة الشاليهات:" Foreground="#F0F4F8" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- Type Buttons as Horizontal Pills -->
+                    <ItemsControl Grid.Column="1" ItemsSource="{Binding ChaletTypes}" VerticalAlignment="Center">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Command="{Binding DataContext.SelectTypeFilterCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                        CommandParameter="{Binding}"
+                                        Cursor="Hand" Height="30" Padding="14,2" Margin="0,0,6,4">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Background" Value="#1E2D3D"/>
+                                            <Setter Property="Foreground" Value="#94A3B8"/>
+                                            <Setter Property="BorderThickness" Value="1"/>
+                                            <Setter Property="BorderBrush" Value="#2D3F55"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="15" Padding="{TemplateBinding Padding}">
+                                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Style.Triggers>
+                                                <DataTrigger Value="True">
+                                                    <DataTrigger.Binding>
+                                                        <MultiBinding Converter="{x:Static helpers:StringEqualsConverter.Instance}">
+                                                            <Binding Path="."/>
+                                                            <Binding Path="DataContext.SelectedChaletType" RelativeSource="{RelativeSource AncestorType=Page}"/>
+                                                        </MultiBinding>
+                                                    </DataTrigger.Binding>
+                                                    <Setter Property="Background" Value="#D4A017"/>
+                                                    <Setter Property="Foreground" Value="#0A1420"/>
+                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                    <Setter Property="BorderBrush" Value="#F59E0B"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <TextBlock Text="{Binding}" FontSize="12.5"/>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- Legend indicators -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Background="#1E3A5F" BorderBrush="#3B82F6" BorderThickness="1" CornerRadius="4" Width="14" Height="14" Margin="0,0,4,0"/>
+                        <TextBlock Text="مسكن" Foreground="#94A3B8" FontSize="11" Margin="0,0,10,0" VerticalAlignment="Center"/>
+
+                        <Border Background="#4A3700" BorderBrush="#D4A017" BorderThickness="1" CornerRadius="4" Width="14" Height="14" Margin="0,0,10,0"/>
+                        <TextBlock Text="حجز مسبق" Foreground="#94A3B8" FontSize="11" Margin="0,0,10,0" VerticalAlignment="Center"/>
+
+                        <Border Background="#111E2B" BorderBrush="#2D3F55" BorderThickness="1" CornerRadius="4" Width="14" Height="14" Margin="0,0,10,0"/>
+                        <TextBlock Text="متاح" Foreground="#94A3B8" FontSize="11" Margin="0,0,10,0" VerticalAlignment="Center"/>
+
+                        <Border Background="#18D4A017" BorderBrush="#D4A017" BorderThickness="1.5" CornerRadius="4" Width="14" Height="14" Margin="0,0,4,0"/>
+                        <TextBlock Text="اليوم الحالي" Foreground="#F0F4F8" FontSize="11" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Row B: Sub-filters (المبنى + الأدوار المتاحة بدون أزرار كل المباني أو الكل) -->
+                <Border Background="#0E1925" CornerRadius="8" Padding="12,6" Margin="0,0,0,8" BorderBrush="#1F2F42" BorderThickness="1">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <!-- Building Areas -->
+                            <ColumnDefinition Width="Auto"/>
+                            <!-- Separator -->
+                            <ColumnDefinition Width="Auto"/>
+                            <!-- Floors -->
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- 1. Building Area Filter -->
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
+                            <materialDesign:PackIcon Kind="Domain" Width="18" Height="18" Foreground="#60A5FA" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="المبنى:" Foreground="#CBD5E1" FontSize="12.5" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <ItemsControl ItemsSource="{Binding BuildingAreas}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Command="{Binding DataContext.SelectBuildingAreaCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                                CommandParameter="{Binding}"
+                                                Height="28" Padding="12,2" Margin="0,0,6,0" Cursor="Hand">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Background" Value="#172332"/>
+                                                    <Setter Property="Foreground" Value="#94A3B8"/>
+                                                    <Setter Property="BorderThickness" Value="1"/>
+                                                    <Setter Property="BorderBrush" Value="#243447"/>
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderBrush}" CornerRadius="14" Padding="{TemplateBinding Padding}">
+                                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                </Border>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Value="True">
+                                                            <DataTrigger.Binding>
+                                                                <MultiBinding Converter="{x:Static helpers:StringEqualsConverter.Instance}">
+                                                                    <Binding Path="."/>
+                                                                    <Binding Path="DataContext.SelectedBuildingArea" RelativeSource="{RelativeSource AncestorType=Page}"/>
+                                                                </MultiBinding>
+                                                            </DataTrigger.Binding>
+                                                            <Setter Property="Background" Value="#2563EB"/>
+                                                            <Setter Property="Foreground" Value="White"/>
+                                                            <Setter Property="FontWeight" Value="Bold"/>
+                                                            <Setter Property="BorderBrush" Value="#3B82F6"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                            <TextBlock Text="{Binding}" FontSize="11.5"/>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <!-- Separator -->
+                        <Border Grid.Column="1" Width="1" Background="#243447" Margin="0,2,16,2"/>
+
+                        <!-- 2. Floor Filter (Only existing floors: GROUND, FIRST, SECOND) -->
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                            <materialDesign:PackIcon Kind="LayersOutline" Width="18" Height="18" Foreground="#38BDF8" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="الدور:" Foreground="#CBD5E1" FontSize="12.5" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <ItemsControl ItemsSource="{Binding FloorFilters}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Command="{Binding DataContext.SelectFloorFilterCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                                CommandParameter="{Binding}"
+                                                Height="28" Padding="14,2" Margin="0,0,6,0" Cursor="Hand">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Background" Value="#172332"/>
+                                                    <Setter Property="Foreground" Value="#94A3B8"/>
+                                                    <Setter Property="BorderThickness" Value="1"/>
+                                                    <Setter Property="BorderBrush" Value="#243447"/>
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="14" Padding="{TemplateBinding Padding}">
+                                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                </Border>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Value="True">
+                                                            <DataTrigger.Binding>
+                                                                <MultiBinding Converter="{x:Static helpers:StringEqualsConverter.Instance}">
+                                                                    <Binding Path="."/>
+                                                                    <Binding Path="DataContext.SelectedFloorFilter" RelativeSource="{RelativeSource AncestorType=Page}"/>
+                                                                </MultiBinding>
+                                                            </DataTrigger.Binding>
+                                                            <Setter Property="Background" Value="#0284C7"/>
+                                                            <Setter Property="Foreground" Value="White"/>
+                                                            <Setter Property="FontWeight" Value="Bold"/>
+                                                            <Setter Property="BorderBrush" Value="#38BDF8"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                            <TextBlock Text="{Binding}" FontSize="11.5"/>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                    </Grid>
+                </Border>
+
+                <!-- Row C: Month Selector (Pills for 1 to 12 + Prev/Next buttons) -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Prev Month & Today -->
+                    <StackPanel Orientation="Horizontal" Grid.Column="0">
+                        <Button Command="{Binding PreviousMonthCommand}" Style="{StaticResource MaterialDesignOutlinedButton}"
+                                Foreground="#D4A017" BorderBrush="#D4A017" Padding="8,4" Height="30" Margin="0,0,6,0" ToolTip="الشهر السابق">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="ChevronRight" Width="16" Height="16"/>
+                                <TextBlock Text="السابق" FontSize="11.5"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding GoToCurrentMonthCommand}" Style="{StaticResource GoldButton}"
+                                Padding="10,4" Height="30" Margin="0,0,8,0" ToolTip="العودة للشهر الحالي">
+                            الشهر الحالي
+                        </Button>
+                    </StackPanel>
+
+                    <!-- Months 1 to 12 as Interactive Tabs -->
+                    <ItemsControl Grid.Column="1" ItemsSource="{Binding MonthsList}" HorizontalAlignment="Center">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Command="{Binding DataContext.SelectMonthCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                        CommandParameter="{Binding MonthNumber}"
+                                        Cursor="Hand" Height="28" Padding="7,2" Margin="2,0">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Background" Value="#1A2533"/>
+                                            <Setter Property="Foreground" Value="#94A3B8"/>
+                                            <Setter Property="BorderThickness" Value="1"/>
+                                            <Setter Property="BorderBrush" Value="#243447"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                    <Setter Property="Background" Value="#1E3A5F"/>
+                                                    <Setter Property="Foreground" Value="#38BDF8"/>
+                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                    <Setter Property="BorderBrush" Value="#38BDF8"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <TextBlock Text="{Binding MonthName}" FontSize="11"/>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- Next Month & Display Title -->
+                    <StackPanel Orientation="Horizontal" Grid.Column="2">
+                        <Button Command="{Binding NextMonthCommand}" Style="{StaticResource MaterialDesignOutlinedButton}"
+                                Foreground="#D4A017" BorderBrush="#D4A017" Padding="8,4" Height="30" Margin="0,0,10,0" ToolTip="الشهر القادم">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="التالي" FontSize="11.5"/>
+                                <materialDesign:PackIcon Kind="ChevronLeft" Width="16" Height="16"/>
+                            </StackPanel>
+                        </Button>
+                        <Border Background="#0A1420" CornerRadius="6" Padding="12,3" BorderBrush="#D4A017" BorderThickness="1" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding CurrentMonthDisplay}" Foreground="#D4A017" FontWeight="Bold" FontSize="13"/>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+
+            </StackPanel>
+        </Border>
+
+        <!-- ================= 2. THE VISUAL MONTHLY TABULA (GRID) ================= -->
+        <Border Grid.Row="2" Background="#162536" CornerRadius="12" BorderBrush="#2D3F55" BorderThickness="1" ClipToBounds="True">
+            <Grid>
+                <!-- Loading Spinner Overlay -->
+                <Border Background="#770A1420" Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}"
+                        VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Panel.ZIndex="100">
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}"
+                                     Value="0" IsIndeterminate="True"
+                                     Width="48" Height="48" Foreground="#D4A017"/>
+                        <TextBlock Text="جاري تحميل البيانات..." Foreground="#F0F4F8" FontSize="13" FontWeight="SemiBold" Margin="0,10,0,0" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" CanContentScroll="False" PanningMode="Both">
+                    <StackPanel Margin="0">
+
+                        <!-- Header Row: Chalet Column + Days 1 to 30/31 -->
+                        <Grid Background="#0A1420">
+                            <Grid.ColumnDefinitions>
+                                <!-- Right-most fixed header for Chalet -->
+                                <ColumnDefinition Width="180"/>
+                                <!-- Days columns -->
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Header 1: Chalet info cell -->
+                            <Border Grid.Column="0" BorderBrush="#243447" BorderThickness="0,0,2,2" Background="#081018" Padding="12,10">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <materialDesign:PackIcon Kind="HomeModern" Width="20" Height="20" Foreground="#D4A017" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="الشاليه / الوحدة" Foreground="#D4A017" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Header 2: Days 1 to 30/31 -->
+                            <ItemsControl Grid.Column="1" ItemsSource="{Binding MonthDates}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Width="46" Height="52" BorderBrush="#243447" BorderThickness="0,0,1,2" Background="#0C1724">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Style.Triggers>
+                                                        <!-- Highlight today header -->
+                                                        <DataTrigger Value="True">
+                                                            <DataTrigger.Binding>
+                                                                <MultiBinding Converter="{x:Static helpers:DateEqualsConverter.Instance}">
+                                                                    <Binding Path="."/>
+                                                                </MultiBinding>
+                                                            </DataTrigger.Binding>
+                                                            <Setter Property="Background" Value="#2A240A"/>
+                                                            <Setter Property="BorderBrush" Value="#D4A017"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                <!-- Day Number (1, 2, 3...) -->
+                                                <TextBlock Text="{Binding Day}" FontWeight="Bold" FontSize="14" Foreground="#F0F4F8" HorizontalAlignment="Center"/>
+                                                <!-- Day Name Arabic (س، ح، ن...) -->
+                                                <TextBlock Text="{Binding StringFormat=ddd, ConverterCulture=ar-EG}" FontSize="10.5" Foreground="#94A3B8" Margin="0,2,0,0" HorizontalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
+
+                        <!-- Chalet Rows -->
+                        <ItemsControl ItemsSource="{Binding MonthlyRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="180"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Right-most column: Chalet Label formatted as شاليه (B-11) without BiDi reversal -->
+                                        <Border Grid.Column="0" BorderBrush="#243447" BorderThickness="0,0,2,1"
+                                                Background="#0E1A27" Padding="12,6" Height="48">
+                                            <Grid VerticalAlignment="Center">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="شاليه (" FontWeight="Bold" Foreground="#60A5FA" FontSize="13.5"/>
+                                                        <TextBlock Text="{Binding Chalet.Number}" FlowDirection="LeftToRight" FontWeight="Bold" Foreground="#60A5FA" FontSize="13.5"/>
+                                                        <TextBlock Text=")" FontWeight="Bold" Foreground="#60A5FA" FontSize="13.5"/>
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal" Margin="0,1,0,0">
+                                                        <TextBlock Text="{Binding Chalet.ChaletType}" FontSize="10.5" Foreground="#D4A017"/>
+                                                        <TextBlock Text=" • " FontSize="10.5" Foreground="#64748B"/>
+                                                        <TextBlock Text="{Binding Chalet.BuildingArea}" FontSize="10.5" Foreground="#94A3B8"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                                <!-- Mini Status Badge -->
+                                                <Border Grid.Column="1" Background="{Binding Chalet.Status, Converter={StaticResource StatusColor}}"
+                                                        CornerRadius="8" Padding="6,2" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Chalet.Status, Converter={StaticResource StatusArabic}}"
+                                                               FontSize="9.5" FontWeight="Bold" Foreground="White"/>
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+
+                                        <!-- Monthly Day Cells -->
+                                        <ItemsControl Grid.Column="1" ItemsSource="{Binding Cells}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button Command="{Binding DataContext.CellClickCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                                            CommandParameter="{Binding}"
+                                                            Width="46" Height="48" Padding="1" Cursor="Hand">
+                                                        <Button.Template>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border Width="46" Height="48" BorderBrush="#1C2B3A" BorderThickness="0,0,1,1"
+                                                                        Background="#111E2B" ToolTip="{Binding TooltipText}">
+                                                                    <Border.Style>
+                                                                        <Style TargetType="Border">
+                                                                            <Style.Triggers>
+                                                                                <!-- 1. Occupied Stay (Active Booking with Invoice or Permanent Residence) -->
+                                                                                <DataTrigger Binding="{Binding IsOccupied}" Value="True">
+                                                                                    <Setter Property="Background" Value="#17314D"/>
+                                                                                </DataTrigger>
+                                                                                <!-- 2. Pre-Reservation (Reservation with Deposit) -->
+                                                                                <DataTrigger Binding="{Binding IsReserved}" Value="True">
+                                                                                    <Setter Property="Background" Value="#3D2E0B"/>
+                                                                                </DataTrigger>
+                                                                                <!-- Hover effect on available -->
+                                                                                <MultiDataTrigger>
+                                                                                    <MultiDataTrigger.Conditions>
+                                                                                        <Condition Binding="{Binding IsAvailable}" Value="True"/>
+                                                                                        <Condition Binding="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=IsMouseOver}" Value="True"/>
+                                                                                    </MultiDataTrigger.Conditions>
+                                                                                    <Setter Property="Background" Value="#163828"/>
+                                                                                </MultiDataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </Border.Style>
+
+                                                                    <Grid>
+                                                                        <!-- Today Glow Indicator -->
+                                                                        <Border Visibility="{Binding IsToday, Converter={StaticResource BoolToVis}}"
+                                                                                BorderBrush="#D4A017" BorderThickness="1.5"
+                                                                                Background="#15D4A017" IsHitTestVisible="False"/>
+
+                                                                        <!-- Occupied (Stay / Permanent) View -->
+                                                                        <Border Visibility="{Binding IsOccupied, Converter={StaticResource BoolToVis}}"
+                                                                                Background="#1E3A5F" BorderBrush="#3B82F6" BorderThickness="1"
+                                                                                CornerRadius="4" Margin="2">
+                                                                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                                                <TextBlock Text="{Binding StatusBadge}" FontSize="8.5" FontWeight="Bold" Foreground="#93C5FD" HorizontalAlignment="Center"/>
+                                                                                <TextBlock Text="{Binding GuestName}" FontSize="8.5" FontWeight="SemiBold" Foreground="White"
+                                                                                           TextTrimming="CharacterEllipsis" MaxWidth="40" HorizontalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                        </Border>
+
+                                                                        <!-- Pre-Reservation View -->
+                                                                        <Border Visibility="{Binding IsReserved, Converter={StaticResource BoolToVis}}"
+                                                                                Background="#4A3700" BorderBrush="#D4A017" BorderThickness="1"
+                                                                                CornerRadius="4" Margin="2">
+                                                                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                                                <TextBlock Text="حجز" FontSize="8.5" FontWeight="Bold" Foreground="#FDE047" HorizontalAlignment="Center"/>
+                                                                                <TextBlock Text="{Binding GuestName}" FontSize="8.5" FontWeight="SemiBold" Foreground="#FEF08A"
+                                                                                           TextTrimming="CharacterEllipsis" MaxWidth="40" HorizontalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                        </Border>
+
+                                                                        <!-- Available View (Clean) -->
+                                                                        <TextBlock Visibility="{Binding IsAvailable, Converter={StaticResource BoolToVis}}"
+                                                                                   Text="+" FontSize="11" Foreground="#334155" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                    </Grid>
+                                                                </Border>
+                                                            </ControlTemplate>
+                                                        </Button.Template>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- ================= 3. BOTTOM SUMMARY ACTION BUTTONS ================= -->
+        <Border Grid.Row="3" Background="#162536" CornerRadius="12" Padding="14,10" Margin="0,10,0,0" BorderBrush="#2D3F55" BorderThickness="1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Button 1: Pre-Reservations & Arrivals Today -->
+                <Button Grid.Column="0" Click="ShowTodayBookings_Click" Cursor="Hand" Height="48" Padding="12,0">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="#0A1420" CornerRadius="8" BorderBrush="#38BDF8" BorderThickness="1.2" x:Name="border">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="#102538"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <materialDesign:PackIcon Kind="CalendarClock" Width="22" Height="22" Foreground="#38BDF8" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="الحجوزات المسبقة ووصول اليوم" FontSize="14" FontWeight="Bold" Foreground="#38BDF8" VerticalAlignment="Center"/>
+                        <Border Background="#163852" CornerRadius="10" Padding="8,2" Margin="8,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding TodayArrivals.Count, StringFormat=العدد: {0}, FallbackValue=0}" FontSize="12" Foreground="#BAE6FD" FontWeight="Bold"/>
+                        </Border>
+                    </StackPanel>
+                </Button>
+
+                <!-- Button 2: Currently In-House Active Bookings -->
+                <Button Grid.Column="2" Click="ShowActiveBookings_Click" Cursor="Hand" Height="48" Padding="12,0">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="#0A1420" CornerRadius="8" BorderBrush="#D4A017" BorderThickness="1.2" x:Name="border">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="#25200C"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <materialDesign:PackIcon Kind="HomeGroup" Width="22" Height="22" Foreground="#D4A017" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="الشاليهات المسكنة حالياً" FontSize="14" FontWeight="Bold" Foreground="#D4A017" VerticalAlignment="Center"/>
+                        <Border Background="#2B260F" CornerRadius="10" Padding="8,2" Margin="8,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding ActiveBookings.Count, StringFormat=العدد: {0}, FallbackValue=0}" FontSize="12" Foreground="#FDE047" FontWeight="Bold"/>
+                        </Border>
+                    </StackPanel>
+                </Button>
+
+                <!-- Button 3: Today Checkouts -->
+                <Button Grid.Column="4" Click="ShowTodayCheckouts_Click" Cursor="Hand" Height="48" Padding="12,0">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="#0A1420" CornerRadius="8" BorderBrush="#818CF8" BorderThickness="1.2" x:Name="border">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="#1C1E38"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <materialDesign:PackIcon Kind="LogoutVariant" Width="22" Height="22" Foreground="#818CF8" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="مغادرات اليوم" FontSize="14" FontWeight="Bold" Foreground="#818CF8" VerticalAlignment="Center"/>
+                        <Border Background="#21264E" CornerRadius="10" Padding="8,2" Margin="8,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding TodayCheckouts.Count, StringFormat=العدد: {0}, FallbackValue=0}" FontSize="12" Foreground="#C7D2FE" FontWeight="Bold"/>
+                        </Border>
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Border>
+
+    </Grid>
+</Page>
