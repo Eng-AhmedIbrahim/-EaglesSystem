@@ -8,11 +8,15 @@ namespace EaglesResort.Views.Pages
     {
         public ReservationsViewModel ViewModel { get; }
 
+        // يُطلق عند إلغاء مودال الحجز الجديد (للرجوع للوحة التحكم)
+        public event EventHandler? CancelNewReservationRequested;
+
         public ReservationsPage()
         {
             InitializeComponent();
             ViewModel = new ReservationsViewModel();
             DataContext = ViewModel;
+            ViewModel.NewReservationCancelled += (s, e) => CancelNewReservationRequested?.Invoke(this, EventArgs.Empty);
 
             Loaded += (s, e) => ViewModel.LoadData();
         }
@@ -23,6 +27,7 @@ namespace EaglesResort.Views.Pages
             InitializeComponent();
             ViewModel = new ReservationsViewModel();
             DataContext = ViewModel;
+            ViewModel.NewReservationCancelled += (s, e) => CancelNewReservationRequested?.Invoke(this, EventArgs.Empty);
 
             Loaded += (s, e) =>
             {

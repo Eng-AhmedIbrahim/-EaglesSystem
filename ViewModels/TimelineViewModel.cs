@@ -40,7 +40,7 @@ namespace EaglesResort.ViewModels
 
         // 1. Chalet Types (STANDARD, PREMIUM, PLUS, DOUBLE, DELUXE)
         [ObservableProperty] private ObservableCollection<string> _chaletTypes = new();
-        [ObservableProperty] private string _selectedChaletType = "STANDARD";
+        [ObservableProperty] private string _selectedChaletType = "PREMIUM";
 
         // 2. Building Areas (Eagle1, Eagle2, Golden_Eagle, D) - بدون زر كل المباني
         [ObservableProperty] private ObservableCollection<string> _buildingAreas = new();
@@ -169,7 +169,10 @@ namespace EaglesResort.ViewModels
 
                 if (string.IsNullOrEmpty(SelectedChaletType) || !ChaletTypes.Contains(SelectedChaletType))
                 {
-                    SelectedChaletType = ChaletTypes.FirstOrDefault() ?? "STANDARD";
+                    // الافتتاحية دائماً على فئة PREMIUM
+                    SelectedChaletType = ChaletTypes.FirstOrDefault(t => t.Trim().Equals("PREMIUM", StringComparison.OrdinalIgnoreCase))
+                                         ?? ChaletTypes.FirstOrDefault()
+                                         ?? "PREMIUM";
                 }
 
                 // 3. Smart update of Building and Floor filters
@@ -468,11 +471,14 @@ namespace EaglesResort.ViewModels
 
                             var activeBooking = chaletBookings.FirstOrDefault(b => b.CheckInDate.Date <= cellDate && b.CheckOutDate.Date > cellDate);
                             var preRes = chaletReservations.FirstOrDefault(r => r.CheckInDate.Date <= cellDate && r.CheckOutDate.Date > cellDate);
+                            bool isPastDay = cellDate.Date < today;
 
                             string tooltip = activeBooking != null
                                 ? $"🏨 إقامة نشطة (مسكن حالياً)\nالنزيل: {activeBooking.GuestName}\nالهاتف: {activeBooking.PhoneNumber}\nالشاليه: ({chalet.Number}) - {chalet.ChaletType}\nالوصول: {activeBooking.CheckInDate:dd/MM/yyyy}\nالمغادرة: {activeBooking.CheckOutDate:dd/MM/yyyy}\nرقم الفاتورة: #{activeBooking.InvoiceId}"
                                 : preRes != null
                                 ? $"⏳ حجز مسبق (عربون: {preRes.Deposit:N0} ج.م)\nالعميل: {preRes.GuestName}\nالهاتف: {preRes.PhoneNumber}\nالشاليه: ({chalet.Number}) - {chalet.ChaletType}\nالوصول: {preRes.CheckInDate:dd/MM/yyyy}\nالمغادرة: {preRes.CheckOutDate:dd/MM/yyyy}\nحجز بتاريخ: {preRes.CreatedAt:dd/MM/yyyy hh:mm tt}"
+                                : isPastDay
+                                ? $"⛔ يوم سابق\nالشاليه: ({chalet.Number}) - {chalet.ChaletType}\nالتاريخ: {cellDate:dd/MM/yyyy}\nلا يمكن الحجز في يوم مضى"
                                 : $"🟢 متاح للحجز\nالشاليه: ({chalet.Number}) - {chalet.ChaletType}\nالتاريخ: {cellDate:dd/MM/yyyy}\nاضغط لإضافة حجز مسبق جديد";
 
                             cells.Add(new MonthlyTimelineCell
@@ -482,6 +488,7 @@ namespace EaglesResort.ViewModels
                                 Chalet = chalet,
                                 Booking = activeBooking,
                                 Reservation = preRes,
+                                IsPast = isPastDay,
                                 IsToday = isToday,
                                 TooltipText = tooltip
                             });
@@ -623,6 +630,9 @@ namespace EaglesResort.ViewModels
         {
             if (cell == null || cell.IsPermanentResidence || !cell.IsAvailable) return;
 
+            // منع الحجز في الأيام السابقة لليوم الحالي
+            if (cell.Date.Date < DateTime.Today) return;
+
             NewReservationRequested?.Invoke(cell.Chalet, cell.Date);
         }
     }
@@ -645,9 +655,18 @@ namespace EaglesResort.ViewModels
         public Reservation? Reservation { get; set; }
         public bool IsPermanentResidence { get; set; }
 
+        // يوم سابق لليوم الحالي: لا يمكن الحجز فيه
+        public bool IsPast { get; set; }
+
         public bool IsOccupied => IsPermanentResidence || Booking != null;
         public bool IsReserved => !IsPermanentResidence && Reservation != null && Booking == null;
         public bool IsAvailable => !IsPermanentResidence && !IsOccupied && !IsReserved;
+
+        // متاح للحجز فعلياً (متاح + ليس يوماً سابقاً)
+        public bool CanBook => IsAvailable && !IsPast;
+
+        // علامة "يوم مضى" تظهر على الخلايا الفاضية فقط
+        public bool ShowPastMark => IsPast && IsAvailable;
         public bool IsToday { get; set; }
 
         public string GuestName =>

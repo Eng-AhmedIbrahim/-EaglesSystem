@@ -283,9 +283,20 @@ namespace EaglesResort.ViewModels
             item.Changed += () =>
             {
                 item.Recalculate(SelectedGuestCategory);
+                item.CheckForConflict(ExistingBookingId, LinkedReservationId);
                 RecalculateTotals();
+                UpdateConflictStatus();
             };
             return item;
+        }
+
+        private void UpdateConflictStatus()
+        {
+            var conflictingItem = BookedChalets.FirstOrDefault(c => c.HasConflict);
+            if (conflictingItem != null)
+            {
+                StatusMessage = conflictingItem.ConflictWarning;
+            }
         }
 
         private void LoadData()
@@ -662,30 +673,27 @@ namespace EaglesResort.ViewModels
                 }
             }
 
-            // Check database overlap for all chalets with detailed conflict warning
-            using (var db = new AppDbContext())
+            // Check database overlap for all chalets against BOTH Bookings and Reservations
+            foreach (var item in BookedChalets)
             {
-                foreach (var item in BookedChalets)
-                {
-                    var conflicting = db.Bookings
-                        .Include(b => b.Chalet)
-                        .FirstOrDefault(b => b.ChaletId == item.SelectedChalet!.Id
-                                          && b.Status != BookingStatus.CheckedOut
-                                          && b.Status != BookingStatus.Cancelled
-                                          && b.CheckInDate < item.CheckOutDate
-                                          && b.CheckOutDate > item.CheckInDate);
-                    if (conflicting != null)
-                    {
-                        var msg = $"⚠️ لا يمكن إتمام الحجز بسبب تعارض في التواريخ!\n\n" +
-                                  $"الشاليه رقم ({item.SelectedChalet!.Number}) محجوز بالفعل للنزيل:\n" +
-                                  $"«{conflicting.GuestName}» (هاتف: {conflicting.PhoneNumber})\n" +
-                                  $"في الفترة من {conflicting.CheckInDate:dd/MM/yyyy} إلى {conflicting.CheckOutDate:dd/MM/yyyy}.\n\n" +
-                                  $"يرجى اختيار شاليه آخر أو تعديل تواريخ الحجز لتجنب التضارب.";
+                var conflict = BookingService.CheckConflict(
+                    item.SelectedChalet!.Id,
+                    item.CheckInDate,
+                    item.CheckOutDate,
+                    ExistingBookingId,
+                    LinkedReservationId);
 
-                        StatusMessage = $"تعارض: الشاليه {item.SelectedChalet.Number} محجوز للنزيل {conflicting.GuestName} ({conflicting.CheckInDate:dd/MM} - {conflicting.CheckOutDate:dd/MM})";
-                        MessageBox.Show(msg, "تعارض في مواعيد الحجز", MessageBoxButton.OK, MessageBoxImage.Warning, MessageBoxResult.OK, MessageBoxOptions.RightAlign | MessageBoxOptions.RtlReading);
-                        return;
-                    }
+                if (conflict.HasConflict)
+                {
+                    StatusMessage = conflict.ErrorMessage.Replace("\n", " ");
+                    MessageBox.Show(
+                        conflict.ErrorMessage + "\n\nيرجى اختيار شاليه آخر أو تعديل تواريخ الحجز لتجنب التضارب.",
+                        "⚠️ تعارض في مواعيد الحجز",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning,
+                        MessageBoxResult.OK,
+                        MessageBoxOptions.RightAlign | MessageBoxOptions.RtlReading);
+                    return;
                 }
             }
 
@@ -766,7 +774,7 @@ namespace EaglesResort.ViewModels
                 bookingsToSave[0].Id = ExistingBookingId.Value;
             }
 
-            var savedBookings = BookingService.SaveMultiBooking(bookingsToSave, invoice);
+            var savedBookings = BookingService.SaveMultiBooking(bookingsToSave, invoice, LinkedReservationId);
             if (LinkedReservationId.HasValue)
             {
                 using var db = new AppDbContext();
@@ -780,7 +788,7 @@ namespace EaglesResort.ViewModels
             }
 
             IsSaved = true;
-            StatusMessage = $"✅ تم حفظ الحجز بنجاح! تم حجز {savedBookings.Count} شاليه برقم فاتورة: {invoice.Id}";
+            StatusMessage = $"✅ تم حفظ الحجز بنجاح! تم حجز {savedBookings.Count} شاليه برقم فاتورة: {invoice.InvoiceNumberDisplay}";
 
             // Link for printing
             invoice.Bookings = savedBookings;

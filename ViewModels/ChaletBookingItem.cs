@@ -21,7 +21,33 @@ namespace EaglesResort.ViewModels
         [ObservableProperty] private int _adultCount = 1;
         [ObservableProperty] private int _childCount = 0;
 
+        // Conflict detection properties
+        [ObservableProperty] private bool _hasConflict = false;
+        [ObservableProperty] private string _conflictWarning = string.Empty;
+
         public event Action? Changed;
+
+        public void CheckForConflict(int? ignoreBookingId = null, int? ignoreReservationId = null)
+        {
+            if (SelectedChalet == null || CheckOutDate <= CheckInDate)
+            {
+                HasConflict = false;
+                ConflictWarning = string.Empty;
+                return;
+            }
+
+            var conflict = BookingService.CheckConflict(SelectedChalet.Id, CheckInDate, CheckOutDate, ignoreBookingId, ignoreReservationId);
+            if (conflict.HasConflict)
+            {
+                HasConflict = true;
+                ConflictWarning = conflict.ErrorMessage.Replace("\n", " — ");
+            }
+            else
+            {
+                HasConflict = false;
+                ConflictWarning = string.Empty;
+            }
+        }
 
         public void Recalculate(string guestCategory)
         {

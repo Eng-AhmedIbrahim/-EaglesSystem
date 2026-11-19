@@ -327,6 +327,27 @@
             <!-- ═════════════════════ COPY 1: نسخة النزيل ═════════════════════ -->
             <StackPanel Margin="22,10,22,6">
 
+                <!-- حالة الفاتورة (معدلة / ملغية) -->
+                <Border Background="{Binding StatusBackground, Mode=OneWay}"
+                        BorderBrush="{Binding StatusBorder, Mode=OneWay}"
+                        BorderThickness="2" CornerRadius="4" Padding="10,6" Margin="0,0,0,8"
+                        Visibility="{Binding HasStatus, Converter={StaticResource B2V}}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding StatusText, Mode=OneWay}"
+                                   FontSize="15" FontWeight="Bold"
+                                   Foreground="{Binding StatusForeground, Mode=OneWay}"
+                                   VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <TextBlock Grid.Column="1" Text="{Binding StatusDetails, Mode=OneWay}"
+                                   FontSize="11" FontWeight="SemiBold" TextWrapping="Wrap"
+                                   Foreground="{Binding StatusForeground, Mode=OneWay}"
+                                   VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
+
                 <!-- HEADER -->
                 <Grid Margin="0,0,0,10">
                     <Grid.ColumnDefinitions>
@@ -338,8 +359,18 @@
                     <StackPanel Grid.Column="0" VerticalAlignment="Top">
                         <TextBlock Text="فــاتــورة" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"/>
                         <TextBlock Text="INVOICE" FontSize="16" FontWeight="Bold" FontFamily="Arial" HorizontalAlignment="Center"/>
-                        <TextBlock Text="(نسخة النزيل)" FontSize="10" HorizontalAlignment="Center"/>
-                        <TextBlock Text="{Binding FullInvoiceDate, Mode=OneWay}" FontSize="10" Foreground="#444" HorizontalAlignment="Center" Margin="0,4,0,0" FlowDirection="LeftToRight"/>
+                        <Border Background="#F0F0F0" BorderBrush="#555" BorderThickness="1" CornerRadius="3"
+                                Padding="7,1" Margin="0,3,0,0" HorizontalAlignment="Center">
+                            <TextBlock FontSize="10" FontWeight="Bold" Foreground="#111" HorizontalAlignment="Center">
+                                <Run Text="COPY" FontFamily="Arial" FontSize="11"/><Run Text=" — نسخة النزيل"/>
+                            </TextBlock>
+                        </Border>
+                        <Border Background="#EFEFEF" BorderBrush="#999" BorderThickness="1" CornerRadius="3" Padding="4,1" Margin="0,4,0,0" HorizontalAlignment="Center">
+                            <TextBlock FontSize="11" FontWeight="Bold" FlowDirection="LeftToRight">
+                                <Run Text="No. "/><Run Text="{Binding InvoiceNumber, Mode=OneWay}"/>
+                            </TextBlock>
+                        </Border>
+                        <TextBlock Text="{Binding FullInvoiceDate, Mode=OneWay}" FontSize="10" Foreground="#444" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" LineHeight="13" Margin="0,4,0,0"/>
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center">
@@ -415,6 +446,15 @@
                     </Grid>
                 </Grid>
 
+                <!-- PAYMENT BREAKDOWN SUMMARY (كاش / فيزا / انستا باي / تحويل بنكي) -->
+                <Border BorderBrush="{StaticResource Line}" BorderThickness="1" Margin="0,10,0,0" Background="#F5F5F5" Padding="8,5">
+                    <StackPanel>
+                        <TextBlock Text="تفاصيل السداد وطرق الدفع" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,2"/>
+                        <TextBlock Text="{Binding PaymentSummaryLine, Mode=OneWay}" FontSize="11" FontWeight="Bold"
+                                   TextWrapping="Wrap" TextAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
                 <!-- SIGNATURES -->
                 <Grid Margin="0,22,0,6">
                     <Grid.ColumnDefinitions>
@@ -436,6 +476,13 @@
                         <TextBlock Text="التوقيع:" Style="{StaticResource Sig}"/>
                     </StackPanel>
                 </Grid>
+
+                <!-- COPY footer (أسفل نسخة النزيل) -->
+                <Border BorderBrush="#999" BorderThickness="0,1,0,0" Padding="0,3,0,0" Margin="0,6,0,0">
+                    <TextBlock FontSize="9.5" Foreground="#555" HorizontalAlignment="Center">
+                        <Run Text="COPY" FontFamily="Arial" FontWeight="Bold"/><Run Text=" — نسخة النزيل"/>
+                    </TextBlock>
+                </Border>
             </StackPanel>
 
             <!-- فاصل بين النسختين -->
@@ -443,6 +490,27 @@
 
             <!-- ═════════════════════ COPY 2: نسخة الحسابات ═════════════════════ -->
             <StackPanel Margin="22,6,22,10">
+
+                <!-- حالة الفاتورة (معدلة / ملغية) -->
+                <Border Background="{Binding StatusBackground, Mode=OneWay}"
+                        BorderBrush="{Binding StatusBorder, Mode=OneWay}"
+                        BorderThickness="2" CornerRadius="4" Padding="10,6" Margin="0,0,0,8"
+                        Visibility="{Binding HasStatus, Converter={StaticResource B2V}}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding StatusText, Mode=OneWay}"
+                                   FontSize="15" FontWeight="Bold"
+                                   Foreground="{Binding StatusForeground, Mode=OneWay}"
+                                   VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <TextBlock Grid.Column="1" Text="{Binding StatusDetails, Mode=OneWay}"
+                                   FontSize="11" FontWeight="SemiBold" TextWrapping="Wrap"
+                                   Foreground="{Binding StatusForeground, Mode=OneWay}"
+                                   VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
 
                 <!-- HEADER -->
                 <Grid Margin="0,0,0,10">
@@ -455,8 +523,18 @@
                     <StackPanel Grid.Column="0" VerticalAlignment="Top">
                         <TextBlock Text="فــاتــورة" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"/>
                         <TextBlock Text="INVOICE" FontSize="16" FontWeight="Bold" FontFamily="Arial" HorizontalAlignment="Center"/>
-                        <TextBlock Text="(نسخة الحسابات)" FontSize="10" HorizontalAlignment="Center"/>
-                        <TextBlock Text="{Binding FullInvoiceDate, Mode=OneWay}" FontSize="10" Foreground="#444" HorizontalAlignment="Center" Margin="0,4,0,0" FlowDirection="LeftToRight"/>
+                        <Border Background="#F0F0F0" BorderBrush="#555" BorderThickness="1" CornerRadius="3"
+                                Padding="7,1" Margin="0,3,0,0" HorizontalAlignment="Center">
+                            <TextBlock FontSize="10" FontWeight="Bold" Foreground="#111" HorizontalAlignment="Center">
+                                <Run Text="COPY" FontFamily="Arial" FontSize="11"/><Run Text=" — نسخة الحسابات"/>
+                            </TextBlock>
+                        </Border>
+                        <Border Background="#EFEFEF" BorderBrush="#999" BorderThickness="1" CornerRadius="3" Padding="4,1" Margin="0,4,0,0" HorizontalAlignment="Center">
+                            <TextBlock FontSize="11" FontWeight="Bold" FlowDirection="LeftToRight">
+                                <Run Text="No. "/><Run Text="{Binding InvoiceNumber, Mode=OneWay}"/>
+                            </TextBlock>
+                        </Border>
+                        <TextBlock Text="{Binding FullInvoiceDate, Mode=OneWay}" FontSize="10" Foreground="#444" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" LineHeight="13" Margin="0,4,0,0"/>
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center">
@@ -497,9 +575,10 @@
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="32"/>
-                                <RowDefinition Height="32"/>
-                                <RowDefinition Height="32"/>
+                                <RowDefinition Height="30"/>
+                                <RowDefinition Height="30"/>
+                                <RowDefinition Height="30"/>
+                                <RowDefinition Height="30"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
@@ -515,34 +594,56 @@
 
                             <!-- لوجوهات الدفع: حط الصور في Assets وخليها Build Action = Resource -->
                             <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource Cell}">
-                                <Image Source="/Assets/instapay.png" Height="43" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Width="50"/>
+                                <Image Source="/Assets/instapay.png" Height="26" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Width="50"/>
                             </Border>
-                            <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource Cell}"/>
-                            <Border Grid.Row="1" Grid.Column="2" Style="{StaticResource Cell}"/>
+                            <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource Cell}">
+                                <TextBlock Text="{Binding InstaHousingFormatted, Mode=OneWay}" Style="{StaticResource TxtB}" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" FlowDirection="LeftToRight"/>
+                            </Border>
+                            <Border Grid.Row="1" Grid.Column="2" Style="{StaticResource Cell}">
+                                <TextBlock Text="{Binding InstaMealsFormatted, Mode=OneWay}" Style="{StaticResource TxtB}" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" FlowDirection="LeftToRight"/>
+                            </Border>
 
                             <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource Cell}">
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" FlowDirection="LeftToRight">
-                                    <Image Source="/Assets/visa.png" Height="30" Stretch="Uniform" Margin="0,0,6,0" Width="30"/>
-                                    <Image Source="/Assets/mastercard.png" Height="30" Stretch="Uniform" Margin="0,0,6,0" Width="32"/>
-                                    <Image Source="/Assets/meeza.png" Height="33" Stretch="Uniform" Width="40" RenderTransformOrigin="0.599,0.123"/>
+                                    <Image Source="/Assets/visa.png" Height="24" Stretch="Uniform" Margin="0,0,4,0" Width="24"/>
+                                    <Image Source="/Assets/mastercard.png" Height="24" Stretch="Uniform" Margin="0,0,4,0" Width="26"/>
+                                    <Image Source="/Assets/meeza.png" Height="26" Stretch="Uniform" Width="32" RenderTransformOrigin="0.599,0.123"/>
                                 </StackPanel>
                             </Border>
-                            <Border Grid.Row="2" Grid.Column="1" Style="{StaticResource Cell}"/>
-                            <Border Grid.Row="2" Grid.Column="2" Style="{StaticResource Cell}"/>
+                            <Border Grid.Row="2" Grid.Column="1" Style="{StaticResource Cell}">
+                                <TextBlock Text="{Binding VisaHousingFormatted, Mode=OneWay}" Style="{StaticResource TxtB}" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" FlowDirection="LeftToRight"/>
+                            </Border>
+                            <Border Grid.Row="2" Grid.Column="2" Style="{StaticResource Cell}">
+                                <TextBlock Text="{Binding VisaMealsFormatted, Mode=OneWay}" Style="{StaticResource TxtB}" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" FlowDirection="LeftToRight"/>
+                            </Border>
 
                             <Border Grid.Row="3" Grid.Column="0" Style="{StaticResource Cell}">
-                                <TextBlock Text="CASH" Style="{StaticResource TxtB}" FontSize="13"/>
+                                <TextBlock Text="CASH" Style="{StaticResource TxtB}" FontSize="13" FontFamily="Arial"/>
                             </Border>
-                            <Border Grid.Row="3" Grid.Column="1" Style="{StaticResource Cell}"/>
-                            <Border Grid.Row="3" Grid.Column="2" Style="{StaticResource Cell}"/>
+                            <Border Grid.Row="3" Grid.Column="1" Style="{StaticResource Cell}">
+                                <TextBlock Text="{Binding CashHousingFormatted, Mode=OneWay}" Style="{StaticResource TxtB}" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" FlowDirection="LeftToRight"/>
+                            </Border>
+                            <Border Grid.Row="3" Grid.Column="2" Style="{StaticResource Cell}">
+                                <TextBlock Text="{Binding CashMealsFormatted, Mode=OneWay}" Style="{StaticResource TxtB}" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" FlowDirection="LeftToRight"/>
+                            </Border>
 
-                            <Border Grid.Row="4" Grid.Column="0" Style="{StaticResource LabelCell}">
+                            <Border Grid.Row="4" Grid.Column="0" Style="{StaticResource Cell}">
+                                <TextBlock Text="تحويل بنكي" Style="{StaticResource TxtB}" FontSize="12"/>
+                            </Border>
+                            <Border Grid.Row="4" Grid.Column="1" Style="{StaticResource Cell}">
+                                <TextBlock Text="{Binding BankHousingFormatted, Mode=OneWay}" Style="{StaticResource TxtB}" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" FlowDirection="LeftToRight"/>
+                            </Border>
+                            <Border Grid.Row="4" Grid.Column="2" Style="{StaticResource Cell}">
+                                <TextBlock Text="{Binding BankMealsFormatted, Mode=OneWay}" Style="{StaticResource TxtB}" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" FlowDirection="LeftToRight"/>
+                            </Border>
+
+                            <Border Grid.Row="5" Grid.Column="0" Style="{StaticResource LabelCell}">
                                 <TextBlock Text="الإجمالي" Style="{StaticResource TxtB}" FontSize="13"/>
                             </Border>
-                            <Border Grid.Row="4" Grid.Column="1" Style="{StaticResource NaCell}">
+                            <Border Grid.Row="5" Grid.Column="1" Style="{StaticResource NaCell}">
                                 <TextBlock Text="{Binding ChaletTotal, Mode=OneWay}" Style="{StaticResource TxtB}" FontSize="13"/>
                             </Border>
-                            <Border Grid.Row="4" Grid.Column="2" Style="{StaticResource NaCell}">
+                            <Border Grid.Row="5" Grid.Column="2" Style="{StaticResource NaCell}">
                                 <TextBlock Text="{Binding MealsTotalFormatted, Mode=OneWay}" Style="{StaticResource TxtB}" FontSize="13"/>
                             </Border>
                         </Grid>
@@ -612,6 +713,13 @@
                         <TextBlock Text="التوقيع:" Style="{StaticResource Sig}"/>
                     </StackPanel>
                 </Grid>
+
+                <!-- COPY footer (أسفل نسخة الحسابات) -->
+                <Border BorderBrush="#999" BorderThickness="0,1,0,0" Padding="0,3,0,0" Margin="0,6,0,0">
+                    <TextBlock FontSize="9.5" Foreground="#555" HorizontalAlignment="Center">
+                        <Run Text="COPY" FontFamily="Arial" FontWeight="Bold"/><Run Text=" — نسخة الحسابات"/>
+                    </TextBlock>
+                </Border>
             </StackPanel>
 
         </StackPanel>

@@ -1,0 +1,419 @@
+<Window x:Class="EaglesResort.Views.Dialogs.InvoiceEditWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="تعديل الفاتورة"
+        Width="1010" Height="790"
+        WindowStyle="None"
+        Background="#0F1923"
+        WindowStartupLocation="CenterOwner"
+        FlowDirection="RightToLeft"
+        ResizeMode="NoResize"
+        FontFamily="Segoe UI, Tahoma, Arial"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
+        RenderOptions.ClearTypeHint="Enabled">
+
+    <Window.Resources>
+        <!-- ===== بطاقة قسم ===== -->
+        <Style x:Key="SectionCard" TargetType="Border">
+            <Setter Property="Background" Value="#162536"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="16,14"/>
+            <Setter Property="BorderBrush" Value="#243447"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Margin" Value="0,0,0,14"/>
+        </Style>
+
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14.5"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#E2E8F0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="Foreground" Value="#94A3B8"/>
+            <Setter Property="Margin" Value="3,0,3,5"/>
+        </Style>
+
+        <!-- ===== مربع إدخال ===== -->
+        <Style x:Key="EditBox" TargetType="TextBox">
+            <Setter Property="Height" Value="37"/>
+            <Setter Property="Padding" Value="11,0"/>
+            <Setter Property="FontSize" Value="13.5"/>
+            <Setter Property="Foreground" Value="#F0F4F8"/>
+            <Setter Property="CaretBrush" Value="#D4A017"/>
+            <Setter Property="SelectionBrush" Value="#D4A017"/>
+            <Setter Property="Background" Value="#0F1923"/>
+            <Setter Property="BorderBrush" Value="#2D3F55"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="TextAlignment" Value="Left"/>
+            <Setter Property="FlowDirection" Value="LeftToRight"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="7">
+                            <ScrollViewer x:Name="PART_ContentHost"
+                                          Margin="{TemplateBinding Padding}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#3B82F6"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#D4A017"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ===== بطاقة إحصائية ===== -->
+        <Style x:Key="Tile" TargetType="Border">
+            <Setter Property="Background" Value="#111E2B"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="14,10"/>
+            <Setter Property="BorderBrush" Value="#243447"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Margin" Value="0,0,10,0"/>
+        </Style>
+        <Style x:Key="TileLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="Foreground" Value="#94A3B8"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+        </Style>
+        <Style x:Key="TileValue" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="20"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="Margin" Value="0,3,0,0"/>
+            <Setter Property="FlowDirection" Value="LeftToRight"/>
+        </Style>
+    </Window.Resources>
+
+    <Border BorderBrush="#243447" BorderThickness="1">
+        <Grid Background="#0F1923">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- ===== HEADER ===== -->
+            <Border Grid.Row="0" Background="#0A1420" Padding="20,13"
+                    BorderBrush="#243447" BorderThickness="0,0,0,1"
+                    MouseLeftButtonDown="Header_MouseDown">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Width="44" Height="44" CornerRadius="12"
+                            Background="#3A2E10" Margin="0,0,12,0">
+                        <materialDesign:PackIcon Kind="Pencil" Width="23" Height="23"
+                                                 Foreground="#D4A017"
+                                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="تعديل الفاتورة" FontSize="20" FontWeight="Bold"
+                                   Foreground="#D4A017"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <materialDesign:PackIcon Kind="ReceiptText" Width="14" Height="14"
+                                                     Foreground="#64748B" VerticalAlignment="Center"
+                                                     Margin="0,0,5,0"/>
+                            <TextBlock x:Name="InvoiceNumberText" FontSize="12.5" Foreground="#94A3B8"
+                                       VerticalAlignment="Center" FlowDirection="LeftToRight"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Button Grid.Column="2" Click="Cancel_Click"
+                            Style="{StaticResource MaterialDesignIconButton}"
+                            Width="38" Height="38" ToolTip="إغلاق">
+                        <materialDesign:PackIcon Kind="Close" Width="20" Height="20" Foreground="#94A3B8"/>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!-- ===== BODY ===== -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="20,16,20,4">
+                <StackPanel>
+
+                    <!-- ملخص مباشر -->
+                    <UniformGrid Columns="4" Margin="0,0,0,2">
+                        <Border Style="{StaticResource Tile}">
+                            <StackPanel>
+                                <TextBlock Text="إجمالي الإقامة" Style="{StaticResource TileLabel}"/>
+                                <TextBlock x:Name="ChaletTotalText" Style="{StaticResource TileValue}"
+                                           Foreground="#60A5FA"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource Tile}">
+                            <StackPanel>
+                                <TextBlock Text="إجمالي الفاتورة" Style="{StaticResource TileLabel}"/>
+                                <TextBlock x:Name="GrandTotalText" Style="{StaticResource TileValue}"
+                                           Foreground="#D4A017"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource Tile}">
+                            <StackPanel>
+                                <TextBlock Text="التأمين" Style="{StaticResource TileLabel}"/>
+                                <TextBlock x:Name="InsuranceTotalText" Style="{StaticResource TileValue}"
+                                           Foreground="#A78BFA"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource Tile}" Margin="0">
+                            <StackPanel>
+                                <TextBlock Text="المتبقي بعد العربون" Style="{StaticResource TileLabel}"/>
+                                <TextBlock x:Name="RemainingTotalText" Style="{StaticResource TileValue}"
+                                           Foreground="#22C55E"/>
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
+
+                    <!-- عمودين -->
+                    <Grid Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="14"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- ===== العمود الأيمن: الوجبات / الإضافيات / العربون ===== -->
+                        <StackPanel Grid.Column="0">
+
+                            <!-- الوجبات -->
+                            <Border Style="{StaticResource SectionCard}">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,10">
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon Kind="SilverwareForkKnife" Width="17" Height="17"
+                                                                     Foreground="#D4A017" VerticalAlignment="Center"
+                                                                     Margin="0,0,7,0"/>
+                                            <TextBlock Text="الوجبات" Style="{StaticResource SectionTitle}"/>
+                                        </StackPanel>
+                                        <TextBlock x:Name="MealsTotalPreview" HorizontalAlignment="Left"
+                                                   FontSize="12" FontWeight="SemiBold" Foreground="#60A5FA"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
+
+                                    <UniformGrid Columns="2">
+                                        <StackPanel Margin="4,0,4,10">
+                                            <TextBlock Text="عدد وجبات البالغين" Style="{StaticResource FieldLabel}"/>
+                                            <TextBox x:Name="AdultMealsCountBox" Style="{StaticResource EditBox}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="4,0,4,10">
+                                            <TextBlock Text="سعر وجبة البالغ" Style="{StaticResource FieldLabel}"/>
+                                            <TextBox x:Name="AdultMealRateBox" Style="{StaticResource EditBox}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="4,0,4,0">
+                                            <TextBlock Text="عدد وجبات الأطفال" Style="{StaticResource FieldLabel}"/>
+                                            <TextBox x:Name="ChildMealsCountBox" Style="{StaticResource EditBox}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="4,0,4,0">
+                                            <TextBlock Text="سعر وجبة الطفل" Style="{StaticResource FieldLabel}"/>
+                                            <TextBox x:Name="ChildMealRateBox" Style="{StaticResource EditBox}"/>
+                                        </StackPanel>
+                                    </UniformGrid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- الإضافيات والتأمين -->
+                            <Border Style="{StaticResource SectionCard}">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                        <materialDesign:PackIcon Kind="PlusBoxMultiple" Width="17" Height="17"
+                                                                 Foreground="#A78BFA" VerticalAlignment="Center"
+                                                                 Margin="0,0,7,0"/>
+                                        <TextBlock Text="الإضافيات والتأمين" Style="{StaticResource SectionTitle}"/>
+                                    </StackPanel>
+
+                                    <UniformGrid Columns="2">
+                                        <StackPanel Margin="4,0,4,10">
+                                            <TextBlock Text="خدمات إضافية" Style="{StaticResource FieldLabel}"/>
+                                            <TextBox x:Name="ExtraServicesBox" Style="{StaticResource EditBox}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="4,0,4,10">
+                                            <TextBlock Text="التأمين المسترد" Style="{StaticResource FieldLabel}"/>
+                                            <TextBox x:Name="InsuranceBox" Style="{StaticResource EditBox}"/>
+                                        </StackPanel>
+                                    </UniformGrid>
+
+                                    <StackPanel Margin="4,0,4,0">
+                                        <TextBlock Text="ملاحظات الخدمات الإضافية" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox x:Name="ExtraServicesNoteBox" Style="{StaticResource EditBox}"
+                                                 Height="58" AcceptsReturn="True" TextWrapping="Wrap"
+                                                 VerticalContentAlignment="Top" Padding="11,8"
+                                                 FlowDirection="RightToLeft" TextAlignment="Right"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- العربون -->
+                            <Border Style="{StaticResource SectionCard}" Margin="0">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                        <materialDesign:PackIcon Kind="Cash" Width="17" Height="17"
+                                                                 Foreground="#22C55E" VerticalAlignment="Center"
+                                                                 Margin="0,0,7,0"/>
+                                        <TextBlock Text="العربون" Style="{StaticResource SectionTitle}"/>
+                                    </StackPanel>
+
+                                    <UniformGrid Columns="2">
+                                        <StackPanel Margin="4,0,4,0">
+                                            <TextBlock Text="قيمة العربون" Style="{StaticResource FieldLabel}"/>
+                                            <TextBox x:Name="DepositBox" Style="{StaticResource EditBox}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="4,0,4,0">
+                                            <TextBlock Text="تاريخ العربون (yyyy/MM/dd)" Style="{StaticResource FieldLabel}"/>
+                                            <TextBox x:Name="DepositDateBox" Style="{StaticResource EditBox}"/>
+                                        </StackPanel>
+                                    </UniformGrid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- ===== العمود الأيسر: طرق الدفع + ملاحظة ===== -->
+                        <StackPanel Grid.Column="2">
+
+                            <!-- السكن -->
+                            <Border Style="{StaticResource SectionCard}">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                        <materialDesign:PackIcon Kind="Home" Width="17" Height="17"
+                                                                 Foreground="#60A5FA" VerticalAlignment="Center"
+                                                                 Margin="0,0,7,0"/>
+                                        <TextBlock Text="تفصيل طرق الدفع — السكن" Style="{StaticResource SectionTitle}"/>
+                                    </StackPanel>
+
+                                    <UniformGrid Columns="2">
+                                        <StackPanel Margin="4,0,4,10">
+                                            <TextBlock Text="كاش" Style="{StaticResource FieldLabel}"/>
+                                            <TextBox x:Name="CashAmountBox" Style="{StaticResource EditBox}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="4,0,4,10">
+                                            <TextBlock Text="فيزا / ماستركارد" Style="{StaticResource FieldLabel}"/>
+                                            <TextBox x:Name="VisaAmountBox" Style="{StaticResource EditBox}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="4,0,4,0">
+                                            <TextBlock Text="انستا باي" Style="{StaticResource FieldLabel}"/>
+                                            <TextBox x:Name="InstaPayAmountBox" Style="{StaticResource EditBox}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="4,0,4,0">
+                                            <TextBlock Text="تحويل بنكي" Style="{StaticResource FieldLabel}"/>
+                                            <TextBox x:Name="BankTransferAmountBox" Style="{StaticResource EditBox}"/>
+                                        </StackPanel>
+                                    </UniformGrid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- الوجبات -->
+                            <Border Style="{StaticResource SectionCard}">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                        <materialDesign:PackIcon Kind="CreditCard" Width="17" Height="17"
+                                                                 Foreground="#F59E0B" VerticalAlignment="Center"
+                                                                 Margin="0,0,7,0"/>
+                                        <TextBlock Text="تفصيل طرق الدفع — الوجبات" Style="{StaticResource SectionTitle}"/>
+                                    </StackPanel>
+
+                                    <UniformGrid Columns="2">
+                                        <StackPanel Margin="4,0,4,10">
+                                            <TextBlock Text="كاش" Style="{StaticResource FieldLabel}"/>
+                                            <TextBox x:Name="MealsCashAmountBox" Style="{StaticResource EditBox}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="4,0,4,10">
+                                            <TextBlock Text="فيزا / ماستركارد" Style="{StaticResource FieldLabel}"/>
+                                            <TextBox x:Name="MealsVisaAmountBox" Style="{StaticResource EditBox}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="4,0,4,0">
+                                            <TextBlock Text="انستا باي" Style="{StaticResource FieldLabel}"/>
+                                            <TextBox x:Name="MealsInstaPayAmountBox" Style="{StaticResource EditBox}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="4,0,4,0">
+                                            <TextBlock Text="تحويل بنكي" Style="{StaticResource FieldLabel}"/>
+                                            <TextBox x:Name="MealsBankTransferAmountBox" Style="{StaticResource EditBox}"/>
+                                        </StackPanel>
+                                    </UniformGrid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- بيانات التعديل -->
+                            <Border Style="{StaticResource SectionCard}" Margin="0">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                        <materialDesign:PackIcon Kind="AccountEdit" Width="17" Height="17"
+                                                                 Foreground="#D4A017" VerticalAlignment="Center"
+                                                                 Margin="0,0,7,0"/>
+                                        <TextBlock Text="بيانات التعديل" Style="{StaticResource SectionTitle}"/>
+                                    </StackPanel>
+
+                                    <TextBlock Text="اسم من قام بالتعديل (إلزامي)" Style="{StaticResource FieldLabel}"/>
+                                    <TextBox x:Name="EditorNameBox" Style="{StaticResource EditBox}"
+                                             FlowDirection="RightToLeft" TextAlignment="Right"
+                                             FontWeight="SemiBold"/>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                        <materialDesign:PackIcon Kind="Information" Width="18" Height="18"
+                                                                 Foreground="#22C55E" VerticalAlignment="Top"
+                                                                 Margin="0,0,8,0"/>
+                                        <TextBlock TextWrapping="Wrap" FontSize="12" LineHeight="19"
+                                                   Foreground="#BBF7D0"
+                                                   Text="الاسم ده هو اللي هيتسجل في سجل الحركات ويظهر على الفاتورة المطبوعة. وبعد الحفظ هتتطبع الفاتورة تلقائياً ومختومة بـ «فاتورة معدلة»."/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- ===== FOOTER ===== -->
+            <Border Grid.Row="2" Background="#0A1420" Padding="20,14"
+                    BorderBrush="#243447" BorderThickness="0,1,0,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock x:Name="StatusText" Grid.Column="0" FontSize="12.5" Foreground="#FDE047"
+                               TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,15,0"
+                               TextAlignment="Right"/>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <Button Click="Save_Click" Style="{StaticResource GoldButton}"
+                                Height="44" Padding="26,0" Margin="0,0,10,0" Cursor="Hand">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="ContentSave" Width="18" Height="18"
+                                                         Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="حفظ التعديلات" FontWeight="Bold" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Click="Cancel_Click" Height="44" Padding="26,0"
+                                Background="#243447" Foreground="White" BorderThickness="0" Cursor="Hand">
+                            <TextBlock Text="إلغاء" VerticalAlignment="Center"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

@@ -116,12 +116,16 @@
             </Border>
 
             <!-- Chalets DataGrid -->
-            <Border Grid.Row="1" Style="{StaticResource CardBorder}" Padding="0">
+            <Border Grid.Row="1" Style="{StaticResource CardBorder}" Padding="0" Effect="{x:Null}">
                 <DataGrid ItemsSource="{Binding FilteredChalets}"
                           SelectedItem="{Binding SelectedChalet}"
                           Style="{StaticResource ModernDataGrid}"
                           IsReadOnly="True" CanUserAddRows="False"
-                          AutoGenerateColumns="False">
+                          AutoGenerateColumns="False"
+                          EnableRowVirtualization="True"
+                          VirtualizingPanel.IsVirtualizing="True"
+                          VirtualizingPanel.VirtualizationMode="Recycling"
+                          ScrollViewer.IsDeferredScrollingEnabled="False">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="رقم الشاليه" Binding="{Binding Number}" Width="100"/>
                         <DataGridTextColumn Header="المبنى / المنطقة" Binding="{Binding BuildingArea}" Width="120"/>

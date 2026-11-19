@@ -18,6 +18,7 @@ namespace EaglesResort.Data
         public DbSet<SpecialRate> SpecialRates { get; set; }
         public DbSet<Booking> Bookings { get; set; }
         public DbSet<Invoice> Invoices { get; set; }
+        public DbSet<InvoiceActionLog> InvoiceActionLogs { get; set; }
         public DbSet<AppSettings> AppSettings { get; set; }
         public DbSet<Receptionist> Receptionists { get; set; }
         public DbSet<Reservation> Reservations { get; set; }
@@ -129,7 +130,12 @@ namespace EaglesResort.Data
                 System.Diagnostics.Debug.WriteLine($"EnsureCreated notice: {ex.Message}");
             }
 
-            // Ensure newly added tables and columns exist in existing database schema
+            // Ensure newly added tables and columns exist in existing database schema.
+            //
+            // مهم جداً: إنشاء/إضافة الأعمدة لازم يكون في ExecuteSqlRaw منفصل عن أي
+            // استعلام يقرأ العمود الجديد. SQL Server بيتحقق من أسماء الأعمدة وقت
+            // تجميع الدفعة (Batch) كلها، فلو الـ UPDATE اللي بيقرأ العمود الجديد
+            // موجود في نفس الدفعة، الدفعة كلها بتفشل حتى الـ ALTER نفسه.
             try
             {
                 Database.ExecuteSqlRaw(@"
@@ -168,24 +174,76 @@ namespace EaglesResort.Data
                         ALTER TABLE [dbo].[Invoices] ADD [DepositReceiptImagePath] NVARCHAR(MAX) NOT NULL DEFAULT '';
                     END
 
-                    IF NOT EXISTS (SELECT 1 FROM [dbo].[Chalets] WHERE [Number] = 'B-21')
+                    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Invoices') AND name = 'InvoiceNumber')
                     BEGIN
-                        INSERT INTO [dbo].[Chalets] ([Number], [BuildingArea], [ChaletType], [RoomsCount], [MaxCapacity], [Status], [Notes])
-                        VALUES ('B-21', 'Golden_Eagle', 'DELUXE', 2, 6, 0, '');
+                        ALTER TABLE [dbo].[Invoices] ADD [InvoiceNumber] NVARCHAR(50) NOT NULL DEFAULT '';
                     END
 
-                    -- Lock B-11 permanently for the Brigadier General (السيد العميد)
-                    UPDATE [dbo].[Chalets]
-                    SET [Status] = 1, [Notes] = N'إقامة دائمة - السيد العميد'
-                    WHERE [Number] = 'B-11';
-                    UPDATE [dbo].[Chalets]
-                    SET [Status] = 1, [Notes] = N'إقامة دائمة -  النقيب احمد'
-                    WHERE [Number] = 'D-8';
+                    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Invoices') AND name = 'IsCancelled')
+                    BEGIN
+                        ALTER TABLE [dbo].[Invoices] ADD [IsCancelled] BIT NOT NULL DEFAULT 0;
+                    END
+
+                    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Invoices') AND name = 'CancelledAt')
+                    BEGIN
+                        ALTER TABLE [dbo].[Invoices] ADD [CancelledAt] DATETIME2 NULL;
+                    END
+
+                    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Invoices') AND name = 'CancelledBy')
+                    BEGIN
+                        ALTER TABLE [dbo].[Invoices] ADD [CancelledBy] NVARCHAR(200) NOT NULL DEFAULT '';
+                    END
+
+                    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Invoices') AND name = 'CancellationReason')
+                    BEGIN
+                        ALTER TABLE [dbo].[Invoices] ADD [CancellationReason] NVARCHAR(MAX) NOT NULL DEFAULT '';
+                    END
+
+                    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Invoices') AND name = 'LastModifiedAt')
+                    BEGIN
+                        ALTER TABLE [dbo].[Invoices] ADD [LastModifiedAt] DATETIME2 NULL;
+                    END
+
+                    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Invoices') AND name = 'LastModifiedBy')
+                    BEGIN
+                        ALTER TABLE [dbo].[Invoices] ADD [LastModifiedBy] NVARCHAR(200) NOT NULL DEFAULT '';
+                    END
+
+                    IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'InvoiceActionLogs')
+                    BEGIN
+                        CREATE TABLE [dbo].[InvoiceActionLogs] (
+                            [Id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                            [InvoiceId] INT NOT NULL,
+                            [BookingId] INT NULL,
+                            [ActionType] NVARCHAR(50) NOT NULL DEFAULT '',
+                            [ActionTitle] NVARCHAR(200) NOT NULL DEFAULT '',
+                            [PerformedBy] NVARCHAR(200) NOT NULL DEFAULT '',
+                            [PerformedAt] DATETIME2 NOT NULL DEFAULT GETDATE(),
+                            [Details] NVARCHAR(MAX) NOT NULL DEFAULT ''
+                        );
+                    END
                 ");
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Schema migration notice: {ex.Message}");
+                LogSchemaError("Schema migration", ex);
+            }
+
+            // دفعة منفصلة: ترقيم الفواتير القديمة (بتقرأ العمود اللي اتضاف فوق)
+            try
+            {
+                Database.ExecuteSqlRaw(@"
+                    UPDATE [dbo].[Invoices]
+                    SET [InvoiceNumber] = 'INV-' + CAST(YEAR([InvoiceDate]) AS VARCHAR(4)) + '-' +
+                                          RIGHT('000000' + CAST([Id] AS VARCHAR(10)), 6)
+                    WHERE [InvoiceNumber] IS NULL OR [InvoiceNumber] = '';
+                ");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Invoice numbering migration notice: {ex.Message}");
+                LogSchemaError("Invoice numbering migration", ex);
             }
 
             // Seed Receptionists
@@ -272,8 +330,15 @@ namespace EaglesResort.Data
                 SaveChanges();
             }
 
-            // Seed chalets if not exists
-            if (!Chalets.Any())
+            // Seed chalets.
+            //
+            // مهم: ما نعتمدش على (Chalets.Any()) لأن أي صف واحد موجود بيخلّي
+            // السيد كله يتخطى (ده اللي حصل لما الميجريشن أضاف B-21 لوحده).
+            // بنستخدم علامة ChaletsSeeded عشان السيد يتم مرة واحدة، وكمان
+            // عشان الشاليهات اللي المستخدم مسحها بعدين ما ترجعش تلقائياً.
+            var chaletsSeeded = AppSettings.Any(s => s.Key == "ChaletsSeeded");
+
+            if (!chaletsSeeded)
             {
                 var chaletsToSeed = new List<Chalet>();
 
@@ -283,7 +348,7 @@ namespace EaglesResort.Data
                     chaletsToSeed.Add(new Chalet { Number = num, BuildingArea = "Golden_Eagle", ChaletType = "PREMIUM", RoomsCount = 3, MaxCapacity = 8, Status = ChaletStatus.Available });
                 }
 
-                // Golden_Eagle Building - B-11 to B-18 and B-22 to B-28: DELUXE
+                // Golden_Eagle Building - B-11 to B-18 and B-21 to B-28: DELUXE
                 var Golden_EagleMumayaz = Enumerable.Range(11, 8).Select(i => $"B-{i}")
                     .Concat(Enumerable.Range(21, 8).Select(i => $"B-{i}"));
                 foreach (var num in Golden_EagleMumayaz)
@@ -319,8 +384,38 @@ namespace EaglesResort.Data
                     chaletsToSeed.Add(new Chalet { Number = $"D-{i}", BuildingArea = "D", ChaletType = "DOUBLE", RoomsCount = 1, MaxCapacity = 1, Status = ChaletStatus.Available });
                 }
 
-                Chalets.AddRange(chaletsToSeed);
+                // نضيف الناقص فقط، من غير ما نلمس أي شاليه موجود بالفعل
+                var existingNumbers = Chalets.Select(c => c.Number).ToList()
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                var missingChalets = chaletsToSeed
+                    .Where(c => !existingNumbers.Contains(c.Number))
+                    .ToList();
+
+                if (missingChalets.Any())
+                {
+                    Chalets.AddRange(missingChalets);
+                    SaveChanges();
+                }
+
+                AppSettings.Add(new AppSettings { Key = "ChaletsSeeded", Value = "1" });
                 SaveChanges();
+
+                // قفل الشاليهات المخصصة للإقامة الدائمة بعد التأكد من وجودها
+                try
+                {
+                    Database.ExecuteSqlRaw(@"
+                        UPDATE [dbo].[Chalets]
+                        SET [Status] = 1, [Notes] = N'إقامة دائمة - السيد العميد'
+                        WHERE [Number] = 'B-11';
+                        UPDATE [dbo].[Chalets]
+                        SET [Status] = 1, [Notes] = N'إقامة دائمة -  النقيب احمد'
+                        WHERE [Number] = 'D-8';");
+                }
+                catch (Exception ex)
+                {
+                    LogSchemaError("Chalet lock seed", ex);
+                }
             }
 
             // Seed monthly rates if not exists
@@ -392,6 +487,16 @@ namespace EaglesResort.Data
                 SpecialRates.AddRange(specialRatesToSeed);
                 SaveChanges();
             }
+        }
+
+        private static void LogSchemaError(string title, Exception ex)
+        {
+            try
+            {
+                var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "schema_log.txt");
+                File.AppendAllText(path, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {title}:{Environment.NewLine}{ex}{Environment.NewLine}{Environment.NewLine}");
+            }
+            catch { }
         }
 
         public static string HashPassword(string password)

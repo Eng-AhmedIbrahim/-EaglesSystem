@@ -1,5 +1,6 @@
 using EaglesResort.Data;
 using EaglesResort.Models;
+using EaglesResort.Services;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -128,19 +129,12 @@ namespace EaglesResort.Views.Dialogs
             var newCheckOut = _booking.CheckOutDate.AddDays(_extraDays);
             _newDateBlock.Text = $"تاريخ المغادرة الجديد: {newCheckOut:dd/MM/yyyy}";
 
-            // Check if chalet is available in the extended period
-            using var db = new AppDbContext();
-            bool conflict = db.Bookings.Any(b =>
-                b.Id != _booking.Id &&
-                b.ChaletId == _booking.ChaletId &&
-                b.Status != BookingStatus.CheckedOut &&
-                b.Status != BookingStatus.Cancelled &&
-                b.CheckInDate < newCheckOut &&
-                b.CheckOutDate > _booking.CheckOutDate);
+            // Check if chalet is available in the extended period against BOTH Bookings and Reservations
+            var conflict = BookingService.CheckConflict(_booking.ChaletId, _booking.CheckOutDate, newCheckOut, _booking.Id, null);
 
-            if (conflict)
+            if (conflict.HasConflict)
             {
-                _availabilityBlock.Text = "⚠️ الشاليه محجوز في هذه الفترة — اختر عدد أيام أقل";
+                _availabilityBlock.Text = conflict.ErrorMessage;
                 _availabilityBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
             }
             else
@@ -154,24 +148,18 @@ namespace EaglesResort.Views.Dialogs
         {
             var newCheckOut = _booking.CheckOutDate.AddDays(_extraDays);
 
-            // Final conflict check
-            using var db = new AppDbContext();
-            bool conflict = db.Bookings.Any(b =>
-                b.Id != _booking.Id &&
-                b.ChaletId == _booking.ChaletId &&
-                b.Status != BookingStatus.CheckedOut &&
-                b.Status != BookingStatus.Cancelled &&
-                b.CheckInDate < newCheckOut &&
-                b.CheckOutDate > _booking.CheckOutDate);
+            // Final conflict check against BOTH Bookings and Reservations
+            var conflict = BookingService.CheckConflict(_booking.ChaletId, _booking.CheckOutDate, newCheckOut, _booking.Id, null);
 
-            if (conflict)
+            if (conflict.HasConflict)
             {
-                MessageBox.Show("لا يمكن التمديد — الشاليه محجوز في هذه الفترة", "تعارض حجوزات",
+                MessageBox.Show(conflict.ErrorMessage + "\n\nلا يمكن تمديد الإقامة بسبب وجود حجز آخر.", "تعارض في مواعيد الحجز",
                     MessageBoxButton.OK, MessageBoxImage.Warning,
                     MessageBoxResult.OK, MessageBoxOptions.RightAlign | MessageBoxOptions.RtlReading);
                 return;
             }
 
+            using var db = new AppDbContext();
             var booking = db.Bookings.Find(_booking.Id);
             if (booking != null)
             {

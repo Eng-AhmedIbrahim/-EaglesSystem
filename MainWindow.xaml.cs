@@ -18,6 +18,7 @@ namespace EaglesResort
         private ReservationsPage? _reservationsPage;
         private AdminPage? _adminPage;
         private GuestsPage? _guestsPage;
+        private ReportsPage? _reportsPage;
         private UsersPage? _usersPage;
 
         public MainWindow()
@@ -95,6 +96,7 @@ namespace EaglesResort
         {
             PageTitle.Text = "سجل وإدارة الحجوزات";
             _reservationsPage = new ReservationsPage();
+            _reservationsPage.CancelNewReservationRequested += (s, e) => NavigateToTimeline();
             MainFrame.Navigate(_reservationsPage);
             SetActiveNav(NavReservations);
         }
@@ -103,6 +105,7 @@ namespace EaglesResort
         {
             PageTitle.Text = "سجل وإدارة الحجوزات";
             _reservationsPage = new ReservationsPage(chalet, checkInDate);
+            _reservationsPage.CancelNewReservationRequested += (s, e) => NavigateToTimeline();
             MainFrame.Navigate(_reservationsPage);
             SetActiveNav(NavReservations);
         }
@@ -140,9 +143,17 @@ namespace EaglesResort
             SetActiveNav(NavUsers);
         }
 
+        private void NavigateToReports()
+        {
+            PageTitle.Text = "التقارير والإحصائيات";
+            _reportsPage = new ReportsPage();
+            MainFrame.Navigate(_reportsPage);
+            SetActiveNav(NavReports);
+        }
+
         private void SetActiveNav(System.Windows.Controls.Button activeBtn)
         {
-            foreach (var btn in new[] { NavTimeline, NavChalets, NavBooking, NavReservations, NavGuests, NavUsers, NavAdmin })
+            foreach (var btn in new[] { NavTimeline, NavChalets, NavBooking, NavReservations, NavGuests, NavReports, NavUsers, NavAdmin })
             {
                 if (btn == null) continue;
                 btn.Background = btn == activeBtn
@@ -159,6 +170,7 @@ namespace EaglesResort
         private void NavBooking_Click(object sender, RoutedEventArgs e) => NavigateToBooking();
         private void NavReservations_Click(object sender, RoutedEventArgs e) => NavigateToReservations();
         private void NavGuests_Click(object sender, RoutedEventArgs e) => NavigateToGuests();
+        private void NavReports_Click(object sender, RoutedEventArgs e) => NavigateToReports();
         private void NavUsers_Click(object sender, RoutedEventArgs e) => NavigateToUsers();
         private void NavAdmin_Click(object sender, RoutedEventArgs e) => NavigateToAdmin();
 

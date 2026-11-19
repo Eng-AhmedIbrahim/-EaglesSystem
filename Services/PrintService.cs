@@ -10,8 +10,33 @@ namespace EaglesResort.Services
     {
         public static void PrintInvoice(Invoice invoice, string? targetPrinter = null)
         {
-            if (invoice?.Booking == null) return;
+            if (invoice == null)
+                throw new InvalidOperationException("لا توجد فاتورة للطباعة.");
+
             var booking = invoice.Booking;
+
+            // بعض الفواتير بتتحمّل من غير بيانات الحجز، فبنحاول نجيبها من قاعدة البيانات
+            // بدل ما الطباعة تفشل بصمت.
+            if (booking == null)
+            {
+                using var lookupDb = new AppDbContext();
+                booking = lookupDb.Bookings
+                    .Include(b => b.Chalet)
+                    .FirstOrDefault(b => b.Id == invoice.BookingId);
+
+                if (booking == null && invoice.Id > 0)
+                {
+                    booking = lookupDb.Bookings
+                        .Include(b => b.Chalet)
+                        .FirstOrDefault(b => b.InvoiceId == invoice.Id);
+                }
+
+                if (booking == null)
+                    throw new InvalidOperationException("تعذر العثور على بيانات الحجز المرتبطة بالفاتورة.");
+
+                invoice.Booking = booking;
+            }
+
             var chalet = booking.Chalet;
 
             System.Windows.Application.Current.Dispatcher.Invoke(() =>
@@ -96,8 +121,20 @@ namespace EaglesResort.Services
                         // Extra services only on first page
                         decimal extraForThisPage = (i == 0) ? invoice.ExtraServices : 0m;
 
-                        // Insurance only on first page
-                        decimal insuranceForThisPage = (i == 0) ? invoice.Insurance : 0m;
+                        // Insurance is a single amount for the whole invoice — split it fairly
+                        // across all chalets instead of repeating the full amount on each page.
+                        decimal insuranceForThisPage;
+                        if (chaletList.Count <= 1)
+                        {
+                            insuranceForThisPage = invoice.Insurance;
+                        }
+                        else
+                        {
+                            var baseShare = Math.Round(invoice.Insurance / chaletList.Count, 2, MidpointRounding.AwayFromZero);
+                            insuranceForThisPage = (i == chaletList.Count - 1)
+                                ? invoice.Insurance - (baseShare * (chaletList.Count - 1))
+                                : baseShare;
+                        }
 
                         // InvoiceTotal = chalet housing + meals + extra (before deposit/insurance)
                         decimal invoiceTotal = thisChaletTotal + mealsTotal + extraForThisPage;
@@ -134,6 +171,7 @@ namespace EaglesResort.Services
 
                         var dc = new
                         {
+                            InvoiceNumber = invoice.InvoiceNumberDisplay,
                             GuestName = formattedGuestName,
                             CheckInDate = cb.CheckInDate.ToString("yyyy/MM/dd"),
                             CheckOutDate = cb.CheckOutDate.ToString("yyyy/MM/dd"),
@@ -173,7 +211,7 @@ namespace EaglesResort.Services
                             MealsTotalFormatted = mealsPaidDisplay.ToString("N0"),
 
                             InvoiceDate = invoice.InvoiceDate.ToString("yyyy/MM/dd"),
-                            FullInvoiceDate = "تاريخ إصدار الفاتورة: " + invoice.InvoiceDate.ToString("yyyy/MM/dd h:mm tt"),
+                            FullInvoiceDate = "تاريخ إصدار الفاتورة:\n" + invoice.InvoiceDate.ToString("yyyy/MM/dd h:mm tt"),
                             ReceptionistName = invoice.ReceptionistName,
                             AccountantName = invoice.AccountantName,
                             PhoneNumber = primaryBooking.PhoneNumber,
@@ -188,13 +226,72 @@ namespace EaglesResort.Services
                             HousingPaymentText = housingPaymentText,
                             MealsPaymentText = mealsPaymentText,
                             HousingPaidFormatted = thisChaletTotal.ToString("N0"),
-                            MealsPaidFormatted = mealsPaidDisplay.ToString("N0")
+                            MealsPaidFormatted = mealsPaidDisplay.ToString("N0"),
+
+                            PaymentSummaryLine = BuildPaymentSummary(invoice),
+                            CashHousingFormatted = PaymentSplit(invoice).CashHousing,
+                            CashMealsFormatted = PaymentSplit(invoice).CashMeals,
+                            VisaHousingFormatted = PaymentSplit(invoice).VisaHousing,
+                            VisaMealsFormatted = PaymentSplit(invoice).VisaMeals,
+                            InstaHousingFormatted = PaymentSplit(invoice).InstaHousing,
+                            InstaMealsFormatted = PaymentSplit(invoice).InstaMeals,
+                            BankHousingFormatted = PaymentSplit(invoice).BankHousing,
+                            BankMealsFormatted = PaymentSplit(invoice).BankMeals,
+
+                            HasStatus = invoice.HasStatusNote,
+                            StatusText = invoice.StatusText,
+                            StatusDetails = invoice.StatusDetailsDisplay,
+                            StatusBackground = invoice.IsCancelled ? "#FDE2E2" : "#FFF4CC",
+                            StatusBorder = invoice.IsCancelled ? "#C00000" : "#B8860B",
+                            StatusForeground = invoice.IsCancelled ? "#A00000" : "#7A5A00"
                         };
 
                         PrintOnePage(printDlg, pageWidth, pageHeight, dc, $"Invoice {invoice.Id} - Chalet {cb.Chalet?.Number}");
                     }
                 }
+
+                InvoiceService.LogAction(invoice.Id, invoice.BookingId, "Printed", "طباعة الفاتورة",
+                    $"تمت طباعة الفاتورة رقم {invoice.InvoiceNumberDisplay}");
             });
+        }
+
+        /// <summary>
+        /// يبني سطر ملخص لطرق الدفع (كاش/فيزا/انستا باي/تحويل بنكي) + المسدد والمتبقي.
+        /// </summary>
+        private static string BuildPaymentSummary(Invoice invoice)
+        {
+            static string F(decimal v) => v > 0 ? $"{v:N0} ج.م" : "-";
+
+            decimal cash = invoice.CashAmount + invoice.MealsCashAmount;
+            decimal visa = invoice.VisaAmount + invoice.MealsVisaAmount;
+            decimal insta = invoice.InstaPayAmount + invoice.MealsInstaPayAmount;
+            decimal bank = invoice.BankTransferAmount + invoice.MealsBankTransferAmount;
+            decimal paid = cash + visa + insta + bank;
+            decimal due = invoice.TotalAfterDeposit;
+            decimal remaining = due - paid;
+            if (remaining < 0) remaining = 0;
+
+            return $"كاش: {F(cash)}  |  فيزا: {F(visa)}  |  انستا باي: {F(insta)}  |  تحويل بنكي: {F(bank)}\n" +
+                   $"إجمالي المسدد: {paid:N0} ج.م   |   المتبقي: {remaining:N0} ج.م";
+        }
+
+        private static string AmountOrDash(decimal value) => value > 0 ? value.ToString("N0") : ".";
+
+        /// <summary>
+        /// يجمع كل الأعمدة المالية الخاصة بطرق الدفع (للفاتورة المطبوعة).
+        /// </summary>
+        private static (string CashHousing, string CashMeals, string VisaHousing, string VisaMeals,
+                        string InstaHousing, string InstaMeals, string BankHousing, string BankMeals) PaymentSplit(Invoice invoice)
+        {
+            return (
+                AmountOrDash(invoice.CashAmount),
+                AmountOrDash(invoice.MealsCashAmount),
+                AmountOrDash(invoice.VisaAmount),
+                AmountOrDash(invoice.MealsVisaAmount),
+                AmountOrDash(invoice.InstaPayAmount),
+                AmountOrDash(invoice.MealsInstaPayAmount),
+                AmountOrDash(invoice.BankTransferAmount),
+                AmountOrDash(invoice.MealsBankTransferAmount));
         }
 
         /// <summary>
@@ -286,6 +383,7 @@ namespace EaglesResort.Services
 
             return new
             {
+                InvoiceNumber = invoice.InvoiceNumberDisplay,
                 GuestName = formattedGuestName,
                 CheckInDate = minCheckIn.ToString("yyyy/MM/dd"),
                 CheckOutDate = maxCheckOut.ToString("yyyy/MM/dd"),
@@ -325,7 +423,7 @@ namespace EaglesResort.Services
                 MealsTotalFormatted = mealsPaidDisplay,
 
                 InvoiceDate = invoice.InvoiceDate.ToString("yyyy/MM/dd"),
-                FullInvoiceDate = "تاريخ إصدار الفاتورة: " + invoice.InvoiceDate.ToString("yyyy/MM/dd h:mm tt"),
+                FullInvoiceDate = "تاريخ إصدار الفاتورة:\n" + invoice.InvoiceDate.ToString("yyyy/MM/dd h:mm tt"),
                 ReceptionistName = invoice.ReceptionistName,
                 AccountantName = invoice.AccountantName,
                 PhoneNumber = primaryBooking.PhoneNumber,
@@ -340,7 +438,24 @@ namespace EaglesResort.Services
                 HousingPaymentText = housingPaymentText,
                 MealsPaymentText = mealsPaymentText,
                 HousingPaidFormatted = housingPaidDisplay,
-                MealsPaidFormatted = mealsPaidDisplay
+                MealsPaidFormatted = mealsPaidDisplay,
+
+                PaymentSummaryLine = BuildPaymentSummary(invoice),
+                CashHousingFormatted = PaymentSplit(invoice).CashHousing,
+                CashMealsFormatted = PaymentSplit(invoice).CashMeals,
+                VisaHousingFormatted = PaymentSplit(invoice).VisaHousing,
+                VisaMealsFormatted = PaymentSplit(invoice).VisaMeals,
+                InstaHousingFormatted = PaymentSplit(invoice).InstaHousing,
+                InstaMealsFormatted = PaymentSplit(invoice).InstaMeals,
+                BankHousingFormatted = PaymentSplit(invoice).BankHousing,
+                BankMealsFormatted = PaymentSplit(invoice).BankMeals,
+
+                HasStatus = invoice.HasStatusNote,
+                StatusText = invoice.StatusText,
+                StatusDetails = invoice.StatusDetailsDisplay,
+                StatusBackground = invoice.IsCancelled ? "#FDE2E2" : "#FFF4CC",
+                StatusBorder = invoice.IsCancelled ? "#C00000" : "#B8860B",
+                StatusForeground = invoice.IsCancelled ? "#A00000" : "#7A5A00"
             };
         }
 

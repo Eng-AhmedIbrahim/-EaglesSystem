@@ -212,8 +212,11 @@ namespace EaglesResort.ViewModels
             NewSelectedChalet = AvailableChalets.FirstOrDefault(c => c.Id == chalet.Id)
                                  ?? AvailableChalets.FirstOrDefault(c => c.Status == ChaletStatus.Available)
                                  ?? AvailableChalets.FirstOrDefault();
-            NewCheckInDate = checkInDate;
-            NewCheckOutDate = checkInDate.AddDays(1);
+
+            // لا يمكن بدء الحجز في يوم مضى
+            var safeDate = checkInDate.Date < DateTime.Today ? DateTime.Today : checkInDate.Date;
+            NewCheckInDate = safeDate;
+            NewCheckOutDate = safeDate.AddDays(1);
             RecalculateNewBookingPrices();
             IsNewReservationOpen = true;
         }
@@ -236,7 +239,27 @@ namespace EaglesResort.ViewModels
         }
 
         partial void OnNewSelectedChaletChanged(Chalet? value) => RecalculateNewBookingPrices();
-        partial void OnNewCheckInDateChanged(DateTime value) => RecalculateNewBookingPrices();
+
+        // أقل تاريخ مسموح به للحجز = اليوم الحالي (لا يمكن الحجز في أيام مضت)
+        public DateTime MinBookableDate => DateTime.Today;
+
+        partial void OnNewCheckInDateChanged(DateTime value)
+        {
+            if (value.Date < DateTime.Today)
+            {
+                NewCheckInDate = DateTime.Today;
+                return;
+            }
+
+            if (NewCheckOutDate.Date <= NewCheckInDate.Date)
+            {
+                NewCheckOutDate = NewCheckInDate.AddDays(1);
+                return;
+            }
+
+            RecalculateNewBookingPrices();
+        }
+
         partial void OnNewCheckOutDateChanged(DateTime value) => RecalculateNewBookingPrices();
 
         private void RecalculateNewBookingPrices()
@@ -353,6 +376,12 @@ namespace EaglesResort.ViewModels
                 return;
             }
 
+            if (NewCheckInDate.Date < DateTime.Today)
+            {
+                MessageBox.Show("لا يمكن تسجيل حجز بتاريخ وصول في يوم مضى. يرجى اختيار تاريخ اليوم أو تاريخ لاحق.", "تاريخ غير صالح", MessageBoxButton.OK, MessageBoxImage.Warning, MessageBoxResult.OK, MessageBoxOptions.RightAlign | MessageBoxOptions.RtlReading);
+                return;
+            }
+
             if (NewCheckOutDate <= NewCheckInDate)
             {
                 MessageBox.Show("تاريخ المغادرة يجب أن يكون بعد تاريخ الوصول!", "خطأ في التواريخ", MessageBoxButton.OK, MessageBoxImage.Warning, MessageBoxResult.OK, MessageBoxOptions.RightAlign | MessageBoxOptions.RtlReading);
@@ -405,10 +434,18 @@ namespace EaglesResort.ViewModels
             }
         }
 
+        // يُطلق عند الضغط على "إلغاء" لإرجاع المستخدم للوحة التحكم
+        public event EventHandler? NewReservationCancelled;
+
         [RelayCommand]
         private void CancelNewReservation()
         {
+            ResetNewReservationForm();
+            ConflictNotice = string.Empty;
+            SuggestedChalets.Clear();
             IsNewReservationOpen = false;
+
+            NewReservationCancelled?.Invoke(this, EventArgs.Empty);
         }
 
         // ===== EDIT RESERVATION =====

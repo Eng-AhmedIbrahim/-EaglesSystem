@@ -1,4 +1,6 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using EaglesResort.Services;
+using EaglesResort.Views.Dialogs;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ClosedXML.Excel;
 using EaglesResort.Data;
@@ -27,6 +29,7 @@ namespace EaglesResort.ViewModels
             using var db = new AppDbContext();
             var all = db.Bookings.Include(b => b.Invoice).Include(b => b.Chalet).ToList();
             var chaletMap = db.Chalets.ToDictionary(c => c.Id, c => c.Number);
+            var invoiceMap = db.Invoices.AsNoTracking().ToDictionary(i => i.Id);
             var lower = SearchQuery?.ToLower().Trim() ?? "";
 
             // Group count for multi-chalet reservations
@@ -42,6 +45,26 @@ namespace EaglesResort.ViewModels
                 if (b.InvoiceId.HasValue && groupCounts.TryGetValue(b.InvoiceId.Value.ToString(), out var c2))
                     return c2;
                 return 1;
+            }
+
+            // التأمين بيتحسب مرة واحدة على الفاتورة، وبيتوزّع بالتساوي على الشاليهات.
+            // مثال: عميل دافع 2000 تأمين على شاليهين => 1000 لكل شاليه (مش 2000 لكل واحد).
+            decimal getInsuranceShare(Booking b)
+            {
+                if (b.InvoiceId.HasValue && invoiceMap.TryGetValue(b.InvoiceId.Value, out var invoice))
+                {
+                    int count = Math.Max(1, getGroupCount(b));
+                    return count == 1 ? invoice.Insurance : Math.Round(invoice.Insurance / count, 2);
+                }
+
+                return b.Invoice?.Insurance ?? 0m;
+            }
+
+            decimal getInsuranceTotal(Booking b)
+            {
+                if (b.InvoiceId.HasValue && invoiceMap.TryGetValue(b.InvoiceId.Value, out var invoice))
+                    return invoice.Insurance;
+                return b.Invoice?.Insurance ?? 0m;
             }
 
             bool matches(Booking b) =>
@@ -61,7 +84,9 @@ namespace EaglesResort.ViewModels
                     b,
                     i + 1,
                     chaletMap.TryGetValue(b.ChaletId, out var n) ? n : b.ChaletId.ToString(),
-                    getGroupCount(b)))
+                    getGroupCount(b),
+                    getInsuranceShare(b),
+                    getInsuranceTotal(b)))
                 .ToList();
 
             var departed = all
@@ -72,7 +97,9 @@ namespace EaglesResort.ViewModels
                     b,
                     i + 1,
                     chaletMap.TryGetValue(b.ChaletId, out var n) ? n : b.ChaletId.ToString(),
-                    getGroupCount(b)))
+                    getGroupCount(b),
+                    getInsuranceShare(b),
+                    getInsuranceTotal(b)))
                 .ToList();
 
             ActiveGuests = new ObservableCollection<BookingRow>(active);
@@ -109,6 +136,12 @@ namespace EaglesResort.ViewModels
             db.SaveChanges();
             LoadGuests();
             StatusMessage = $"✅ تم تسجيل مغادرة {row.Booking.GuestName} بنجاح";
+
+            var invoiceId = booking.InvoiceId
+                ?? db.Invoices.FirstOrDefault(i => i.BookingId == booking.Id)?.Id;
+            if (invoiceId.HasValue)
+                InvoiceService.LogAction(invoiceId.Value, booking.Id, "CheckedOut", "تسجيل مغادرة",
+                    $"تم تسجيل مغادرة النزيل {booking.GuestName} من الشاليه {row.ChaletNumber}");
         }
 
         public Action<Booking>? ExtendRequested { get; set; }
@@ -124,24 +157,145 @@ namespace EaglesResort.ViewModels
         private void ViewPaymentDetails(BookingRow? row)
         {
             if (row == null) return;
-            using var db = new AppDbContext();
-            var invoice = db.Invoices
-                .Include(i => i.Bookings)
-                    .ThenInclude(b => b.Chalet)
-                .Include(i => i.Booking)
-                    .ThenInclude(b => b!.Chalet)
-                .FirstOrDefault(i => (row.Booking.InvoiceId.HasValue && i.Id == row.Booking.InvoiceId.Value) || i.BookingId == row.Booking.Id);
-
-            if (invoice != null)
+            var invoice = LoadInvoice(row);
+            if (invoice == null)
             {
-                var dialog = new Views.Dialogs.PaymentDetailsDialog(invoice);
-                dialog.ShowDialog();
+                ShowInfo("لا توجد تفاصيل دفع أو فاتورة مسجلة لهذا الحجز.");
+                return;
             }
-            else
+
+            var dialog = new PaymentDetailsDialog(invoice) { Owner = GetOwner() };
+            dialog.ShowDialog();
+            LoadGuests();
+        }
+
+        /// <summary>تعديل الفاتورة (للأدمن فقط) ثم طباعتها تلقائياً.</summary>
+        [RelayCommand]
+        private void EditInvoice(BookingRow? row)
+        {
+            if (row == null) return;
+
+            if (!SessionService.Instance.IsAdmin)
             {
-                System.Windows.MessageBox.Show("لا توجد تفاصيل دفع أو فاتورة مسجلة لهذا الحجز.", "تنبيه", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                ShowInfo("تعديل الفاتورة متاح لحساب مدير النظام فقط.");
+                return;
+            }
+
+            var invoice = LoadInvoice(row);
+            if (invoice == null)
+            {
+                ShowInfo("لا توجد فاتورة مسجلة لهذا الحجز.");
+                return;
+            }
+
+            if (invoice.IsCancelled)
+            {
+                ShowInfo("لا يمكن تعديل فاتورة ملغية.");
+                return;
+            }
+
+            var editor = new InvoiceEditWindow(invoice) { Owner = GetOwner() };
+            if (editor.ShowDialog() != true) return;
+
+            var result = InvoiceService.UpdateInvoice(editor.EditedInvoice, editor.EditorName);
+            StatusMessage = result.Message;
+
+            if (!result.Success)
+            {
+                ShowInfo(result.Message);
+                return;
+            }
+
+            LoadGuests();
+
+            // طباعة الفاتورة بعد التعديل (مع بانر "فاتورة معدلة" أعلى الفاتورة)
+            var refreshed = InvoiceService.GetById(invoice.Id);
+            if (refreshed != null) TryPrint(refreshed);
+        }
+
+        /// <summary>إلغاء الفاتورة وكل حجوزاتها ثم طباعتها تلقائياً وهي مختومة "ملغية".</summary>
+        [RelayCommand]
+        private void CancelInvoice(BookingRow? row)
+        {
+            if (row == null) return;
+
+            if (!SessionService.Instance.IsAdmin)
+            {
+                ShowInfo("إلغاء الفاتورة متاح لحساب مدير النظام فقط.");
+                return;
+            }
+
+            var invoice = LoadInvoice(row);
+            if (invoice == null)
+            {
+                ShowInfo("لا توجد فاتورة مسجلة لهذا الحجز.");
+                return;
+            }
+
+            if (invoice.IsCancelled)
+            {
+                ShowInfo("هذه الفاتورة ملغية بالفعل.");
+                return;
+            }
+
+            var dialog = new CancelInvoiceDialog(invoice.InvoiceNumberDisplay, invoice.Booking?.GuestName ?? row.Booking.GuestName)
+            {
+                Owner = GetOwner()
+            };
+            if (dialog.ShowDialog() != true) return;
+
+            var result = InvoiceService.CancelInvoice(invoice.Id, dialog.Reason, dialog.CancelledBy);
+            StatusMessage = result.Message;
+
+            if (!result.Success)
+            {
+                ShowInfo(result.Message);
+                return;
+            }
+
+            LoadGuests();
+
+            // طباعة نسخة "ملغية" للتوثيق
+            var refreshed = InvoiceService.GetById(invoice.Id);
+            if (refreshed != null) TryPrint(refreshed);
+        }
+
+        /// <summary>إعادة طباعة الفاتورة.</summary>
+        [RelayCommand]
+        private void PrintInvoice(BookingRow? row)
+        {
+            if (row == null) return;
+
+            var invoice = LoadInvoice(row);
+            if (invoice == null)
+            {
+                ShowInfo("لا توجد فاتورة مسجلة لهذا الحجز.");
+                return;
+            }
+
+            PrintService.PrintInvoice(invoice);
+        }
+
+        /// <summary>طباعة آمنة: تعرض رسالة واضحة بدل ما يقع التطبيق لو الطباعة فشلت.</summary>
+        private void TryPrint(Invoice invoice)
+        {
+            try
+            {
+                PrintService.PrintInvoice(invoice);
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"تعذر طباعة الفاتورة: {ex.Message}";
+                ShowInfo(StatusMessage);
             }
         }
+
+        private static Invoice? LoadInvoice(BookingRow row) => InvoiceService.GetByBookingId(row.Booking.Id);
+
+        private static Window? GetOwner() => System.Windows.Application.Current?.MainWindow;
+
+        private static void ShowInfo(string message) =>
+            MessageBox.Show(message, "تنبيه", MessageBoxButton.OK, MessageBoxImage.Information);
 
         [RelayCommand]
         public void SaveRow(BookingRow? row)
@@ -152,6 +306,21 @@ namespace EaglesResort.ViewModels
                 using var db = new AppDbContext();
                 var booking = db.Bookings.Include(b => b.Invoice).FirstOrDefault(b => b.Id == row.Booking.Id);
                 if (booking == null) return;
+
+                if (row.Booking.CheckOutDate <= row.Booking.CheckInDate)
+                {
+                    MessageBox.Show("تاريخ المغادرة يجب أن يكون بعد تاريخ الوصول!", "خطأ في التواريخ", MessageBoxButton.OK, MessageBoxImage.Warning, MessageBoxResult.OK, MessageBoxOptions.RightAlign | MessageBoxOptions.RtlReading);
+                    LoadGuests();
+                    return;
+                }
+
+                var conflict = BookingService.CheckConflict(booking.ChaletId, row.Booking.CheckInDate, row.Booking.CheckOutDate, booking.Id, null);
+                if (conflict.HasConflict)
+                {
+                    MessageBox.Show(conflict.ErrorMessage + "\n\nيرجى اختيار تواريخ أخرى لتجنب التضارب.", "⚠️ تعارض في مواعيد الحجز", MessageBoxButton.OK, MessageBoxImage.Warning, MessageBoxResult.OK, MessageBoxOptions.RightAlign | MessageBoxOptions.RtlReading);
+                    LoadGuests();
+                    return;
+                }
 
                 booking.GuestName = row.Booking.GuestName;
                 booking.PhoneNumber = row.Booking.PhoneNumber;
@@ -267,17 +436,34 @@ namespace EaglesResort.ViewModels
         public bool IsMultiChalet { get; }
         public string MultiBadgeText { get; }
         public bool HasSecondaryPhone => !string.IsNullOrWhiteSpace(Booking.SecondaryPhoneNumber);
+
+        /// <summary>نصيب هذا الشاليه من تأمين الفاتورة (بيتوزّع بالتساوي على الشاليهات).</summary>
+        public decimal InsuranceShare { get; }
+
+        /// <summary>إجمالي التأمين المسجل على الفاتورة كلها.</summary>
+        public decimal InsuranceTotal { get; }
+
+        public string InsuranceTooltip => IsMultiChalet
+            ? $"إجمالي تأمين الفاتورة {InsuranceTotal:N0} ج.م مقسوم على {MultiChaletCount} شاليهات — نصيب هذا الشاليه {InsuranceShare:N0} ج.م"
+            : $"قيمة التأمين {InsuranceShare:N0} ج.م";
+
+        private int MultiChaletCount { get; }
+
         public string DisplayName => !string.IsNullOrWhiteSpace(Booking.GuestRank)
             ? $"{Booking.GuestRank} / {Booking.GuestName}"
             : Booking.GuestName;
 
-        public BookingRow(Booking booking, int rowNumber, string chaletNumber = "", int groupCount = 1)
+        public BookingRow(Booking booking, int rowNumber, string chaletNumber = "", int groupCount = 1,
+                          decimal insuranceShare = 0m, decimal insuranceTotal = 0m)
         {
             Booking = booking;
             RowNumber = rowNumber;
             ChaletNumber = chaletNumber;
             IsMultiChalet = groupCount > 1;
+            MultiChaletCount = Math.Max(1, groupCount);
             MultiBadgeText = IsMultiChalet ? $"ضمن {groupCount} شاليهات" : "";
+            InsuranceShare = insuranceShare;
+            InsuranceTotal = insuranceTotal;
         }
     }
 }

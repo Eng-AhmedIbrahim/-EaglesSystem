@@ -47,7 +47,15 @@ namespace EaglesResort.Views.Pages
                     savedPrinter = db.AppSettings.FirstOrDefault(s => s.Key == "DefaultPrinter")?.Value;
                 }
 
-                PrintService.PrintInvoice(_lastSavedInvoice, savedPrinter);
+                try
+                {
+                    PrintService.PrintInvoice(_lastSavedInvoice, savedPrinter);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"تعذر طباعة الفاتورة: {ex.Message}", "تنبيه",
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
             };
             DataContext = _vm;
         }
@@ -67,7 +75,15 @@ namespace EaglesResort.Views.Pages
                 savedPrinter = db.AppSettings.FirstOrDefault(s => s.Key == "DefaultPrinter")?.Value;
             }
 
-            PrintService.PrintInvoice(_lastSavedInvoice, savedPrinter);
+            try
+            {
+                PrintService.PrintInvoice(_lastSavedInvoice, savedPrinter);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"تعذر طباعة الفاتورة: {ex.Message}", "تنبيه",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
     }
 }

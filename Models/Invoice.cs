@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EaglesResort.Models
@@ -13,6 +15,9 @@ namespace EaglesResort.Models
 
         [ForeignKey("BookingId")]
         public virtual Booking? Booking { get; set; }
+
+        // الرقم التسلسلي للفاتورة (يظهر أعلى الفاتورة)
+        public string InvoiceNumber { get; set; } = string.Empty;
 
         public string GroupBookingCode { get; set; } = string.Empty;
 
@@ -73,5 +78,59 @@ namespace EaglesResort.Models
         public string ReceptionistName { get; set; } = string.Empty;
         public string AccountantName { get; set; } = string.Empty;
         public string ResortManagerName { get; set; } = string.Empty;
+
+        // ===== حالة الفاتورة وسجل التعديل/الإلغاء =====
+        public bool IsCancelled { get; set; }
+        public DateTime? CancelledAt { get; set; }
+        public string CancelledBy { get; set; } = string.Empty;
+        public string CancellationReason { get; set; } = string.Empty;
+
+        public DateTime? LastModifiedAt { get; set; }
+        public string LastModifiedBy { get; set; } = string.Empty;
+
+        // ===== قيم محسوبة غير مخزنة في قاعدة البيانات =====
+        [NotMapped] public bool IsModified => LastModifiedAt.HasValue && !IsCancelled;
+        [NotMapped] public bool HasStatusNote => IsCancelled || LastModifiedAt.HasValue;
+
+        [NotMapped] public string StatusText => IsCancelled
+            ? "فاتورة ملغية"
+            : (LastModifiedAt.HasValue ? "فاتورة معدلة" : string.Empty);
+
+        [NotMapped] public string StatusDetailsDisplay
+        {
+            get
+            {
+                if (IsCancelled)
+                {
+                    var reason = string.IsNullOrWhiteSpace(CancellationReason) ? "بدون سبب مسجل" : CancellationReason;
+                    var when = CancelledAt?.ToString("dd/MM/yyyy hh:mm tt") ?? "—";
+                    return $"أُلغيت بواسطة {CancelledBy} في {when} — السبب: {reason}";
+                }
+
+                if (LastModifiedAt.HasValue)
+                    return $"آخر تعديل بواسطة {LastModifiedBy} في {LastModifiedAt.Value:dd/MM/yyyy hh:mm tt}";
+
+                return string.Empty;
+            }
+        }
+
+        // سجل الحركات (يُحمَّل عند العرض فقط)
+        [NotMapped] public List<InvoiceActionLog> ActionLogs { get; set; } = new();
+        [NotMapped] public bool HasActionLogs => ActionLogs != null && ActionLogs.Count > 0;
+
+        [NotMapped] public decimal HousingPaid => CashAmount + InstaPayAmount + VisaAmount + BankTransferAmount;
+        [NotMapped] public decimal MealsPaid => MealsCashAmount + MealsInstaPayAmount + MealsVisaAmount + MealsBankTransferAmount;
+        [NotMapped] public decimal TotalPaid => HousingPaid + MealsPaid;
+
+        // إجمالي كل طريقة دفع (سكن + وجبات)
+        [NotMapped] public decimal CashCombined => CashAmount + MealsCashAmount;
+        [NotMapped] public decimal VisaCombined => VisaAmount + MealsVisaAmount;
+        [NotMapped] public decimal InstaPayCombined => InstaPayAmount + MealsInstaPayAmount;
+        [NotMapped] public decimal BankTransferCombined => BankTransferAmount + MealsBankTransferAmount;
+        [NotMapped] public decimal RemainingAmount => Math.Max(0, TotalAfterDeposit - TotalPaid);
+        [NotMapped] public bool HasPaymentSplit => TotalPaid > 0;
+
+        [NotMapped] public string InvoiceNumberDisplay =>
+            string.IsNullOrWhiteSpace(InvoiceNumber) ? (Id > 0 ? $"INV-{Id}" : "—") : InvoiceNumber;
     }
 }

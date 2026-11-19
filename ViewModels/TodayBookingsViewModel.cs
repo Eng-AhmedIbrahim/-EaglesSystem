@@ -188,6 +188,13 @@ namespace EaglesResort.ViewModels
                 return;
             }
 
+            var conflict = BookingService.CheckReservationConflict(SelectedNewChalet.Id, SelectedReservation.CheckInDate, SelectedReservation.CheckOutDate, SelectedReservation.Id);
+            if (conflict.HasConflict)
+            {
+                MessageBox.Show(conflict.ErrorMessage, "⚠️ تعارض في مواعيد الحجز", MessageBoxButton.OK, MessageBoxImage.Warning, MessageBoxResult.OK, MessageBoxOptions.RightAlign | MessageBoxOptions.RtlReading);
+                return;
+            }
+
             try
             {
                 using var db = new AppDbContext();
@@ -199,7 +206,8 @@ namespace EaglesResort.ViewModels
                     var chalet = db.Chalets.Find(SelectedNewChalet.Id);
                     if (chalet != null)
                     {
-                        // Keep existing daily rate or fetch from chalet
+                        var rateTuple = BookingService.GetRate(chalet.ChaletType, r.CheckInDate.Month, "مدني");
+                        r.DailyRate = rateTuple.Daily > 0 ? rateTuple.Daily : r.DailyRate;
                         r.ChaletTotal = r.NumberOfDays * r.DailyRate;
                     }
                     db.SaveChanges();
@@ -253,6 +261,13 @@ namespace EaglesResort.ViewModels
             if (EditCheckOutDate <= EditCheckInDate)
             {
                 MessageBox.Show("تاريخ المغادرة يجب أن يكون بعد تاريخ الوصول!", "خطأ في التواريخ", MessageBoxButton.OK, MessageBoxImage.Warning, MessageBoxResult.OK, MessageBoxOptions.RightAlign | MessageBoxOptions.RtlReading);
+                return;
+            }
+
+            var conflict = BookingService.CheckReservationConflict(SelectedReservation.ChaletId, EditCheckInDate, EditCheckOutDate, SelectedReservation.Id);
+            if (conflict.HasConflict)
+            {
+                MessageBox.Show(conflict.ErrorMessage, "⚠️ تعارض في مواعيد الحجز", MessageBoxButton.OK, MessageBoxImage.Warning, MessageBoxResult.OK, MessageBoxOptions.RightAlign | MessageBoxOptions.RtlReading);
                 return;
             }
 

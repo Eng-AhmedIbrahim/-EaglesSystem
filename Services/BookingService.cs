@@ -106,17 +106,26 @@ namespace EaglesResort.Services
             return total;
         }
 
-        public static Booking SaveBooking(Booking booking, Invoice invoice)
+        public static Booking SaveBooking(Booking booking, Invoice invoice, int? linkedReservationId = null)
         {
-            var list = SaveMultiBooking(new List<Booking> { booking }, invoice);
+            var list = SaveMultiBooking(new List<Booking> { booking }, invoice, linkedReservationId);
             return list.First();
         }
 
-        public static List<Booking> SaveMultiBooking(List<Booking> bookings, Invoice invoice)
+        public static List<Booking> SaveMultiBooking(List<Booking> bookings, Invoice invoice, int? linkedReservationId = null)
         {
+            // Strict conflict check on all bookings before saving anything
+            foreach (var b in bookings)
+            {
+                var conflict = CheckConflict(b.ChaletId, b.CheckInDate, b.CheckOutDate, b.Id > 0 ? b.Id : null, linkedReservationId);
+                if (conflict.HasConflict)
+                {
+                    throw new InvalidOperationException(conflict.ErrorMessage);
+                }
+            }
+
             using var db = CreateContext();
             var groupCode = Guid.NewGuid().ToString("N")[..8].ToUpper();
-
             var firstBooking = bookings[0];
             if (firstBooking.Id > 0)
             {
@@ -152,6 +161,10 @@ namespace EaglesResort.Services
             db.SaveChanges();
 
             invoice.BookingId = firstBooking.Id;
+            if (string.IsNullOrWhiteSpace(invoice.InvoiceNumber))
+            {
+                invoice.InvoiceNumber = GenerateInvoiceNumber(db, invoice.InvoiceDate);
+            }
             db.Invoices.Add(invoice);
             db.SaveChanges();
 
@@ -308,7 +321,7 @@ namespace EaglesResort.Services
                 .ToList();
         }
 
-        public static BookingConflictResult CheckConflict(int chaletId, DateTime checkIn, DateTime checkOut, int? ignoreBookingId = null)
+        public static BookingConflictResult CheckConflict(int chaletId, DateTime checkIn, DateTime checkOut, int? ignoreBookingId = null, int? ignoreReservationId = null)
         {
             using var db = CreateContext();
 
@@ -326,74 +339,19 @@ namespace EaglesResort.Services
             if (conflict != null)
             {
                 var chaletNum = conflict.Chalet?.Number ?? chaletId.ToString();
-                var suggestions = GetAvailableAlternativeChalets(db, chaletId, checkIn, checkOut, ignoreBookingId, null);
+                var suggestions = GetAvailableAlternativeChalets(db, chaletId, checkIn, checkOut, ignoreBookingId, ignoreReservationId);
                 return new BookingConflictResult
                 {
                     HasConflict = true,
                     ConflictingBooking = conflict,
                     ConflictingGuestName = conflict.GuestName,
                     ConflictingDates = $"{conflict.CheckInDate:dd/MM/yyyy} إلى {conflict.CheckOutDate:dd/MM/yyyy}",
-                    ErrorMessage = $"⚠️ الشاليه ({chaletNum}) غير متاح في هذه الفترة!\nمسجل له إقامة حالية للنزيل: «{conflict.GuestName}» من {conflict.CheckInDate:dd/MM/yyyy} إلى {conflict.CheckOutDate:dd/MM/yyyy}.",
+                    ErrorMessage = $"⚠️ الشاليه ({chaletNum}) غير متاح في هذه الفترة!\nمسجل له إقامة / تسكين حالي للنزيل: «{conflict.GuestName}» (هاتف: {conflict.PhoneNumber})\nفي الفترة من {conflict.CheckInDate:dd/MM/yyyy} إلى {conflict.CheckOutDate:dd/MM/yyyy}.",
                     SuggestedChalets = suggestions
                 };
             }
 
             // 2. Conflict with Reservations
-            var resConflict = db.Reservations
-                .Include(r => r.Chalet)
-                .Where(r => r.ChaletId == chaletId &&
-                            r.Status == ReservationStatus.Upcoming &&
-                            r.CheckInDate.Date < checkOut.Date &&
-                            r.CheckOutDate.Date > checkIn.Date)
-                .FirstOrDefault();
-
-            if (resConflict != null)
-            {
-                var chaletNum = resConflict.Chalet?.Number ?? chaletId.ToString();
-                var suggestions = GetAvailableAlternativeChalets(db, chaletId, checkIn, checkOut, ignoreBookingId, null);
-                return new BookingConflictResult
-                {
-                    HasConflict = true,
-                    ConflictingGuestName = resConflict.GuestName,
-                    ConflictingDates = $"{resConflict.CheckInDate:dd/MM/yyyy} إلى {resConflict.CheckOutDate:dd/MM/yyyy}",
-                    ErrorMessage = $"⚠️ الشاليه ({chaletNum}) غير متاح في هذه الفترة!\nمسجل له حجز مسبق باسم: «{resConflict.GuestName}» من {resConflict.CheckInDate:dd/MM/yyyy} إلى {resConflict.CheckOutDate:dd/MM/yyyy}.",
-                    SuggestedChalets = suggestions
-                };
-            }
-
-            return new BookingConflictResult { HasConflict = false };
-        }
-
-        public static BookingConflictResult CheckReservationConflict(int chaletId, DateTime checkIn, DateTime checkOut, int? ignoreReservationId = null)
-        {
-            using var db = CreateContext();
-
-            // 1. Check against active bookings
-            var bookingConflict = db.Bookings
-                .Include(b => b.Chalet)
-                .Where(b => b.ChaletId == chaletId &&
-                            b.Status != BookingStatus.Cancelled &&
-                            b.Status != BookingStatus.CheckedOut &&
-                            b.CheckInDate.Date < checkOut.Date &&
-                            b.CheckOutDate.Date > checkIn.Date)
-                .FirstOrDefault();
-
-            if (bookingConflict != null)
-            {
-                var chaletNum = bookingConflict.Chalet?.Number ?? chaletId.ToString();
-                var suggestions = GetAvailableAlternativeChalets(db, chaletId, checkIn, checkOut, null, ignoreReservationId);
-                return new BookingConflictResult
-                {
-                    HasConflict = true,
-                    ConflictingBooking = bookingConflict,
-                    ConflictingGuestName = bookingConflict.GuestName,
-                    ConflictingDates = $"{bookingConflict.CheckInDate:dd/MM/yyyy} إلى {bookingConflict.CheckOutDate:dd/MM/yyyy}",
-                    ErrorMessage = $"⚠️ الشاليه ({chaletNum}) غير متاح!\nمسجل بإقامة حالية للنزيل: «{bookingConflict.GuestName}» (هاتف: {bookingConflict.PhoneNumber}) في الفترة من {bookingConflict.CheckInDate:dd/MM/yyyy} إلى {bookingConflict.CheckOutDate:dd/MM/yyyy}.",
-                    SuggestedChalets = suggestions
-                };
-            }
-
-            // 2. Check against other pre-reservations
             var resConflict = db.Reservations
                 .Include(r => r.Chalet)
                 .Where(r => r.ChaletId == chaletId &&
@@ -406,18 +364,23 @@ namespace EaglesResort.Services
             if (resConflict != null)
             {
                 var chaletNum = resConflict.Chalet?.Number ?? chaletId.ToString();
-                var suggestions = GetAvailableAlternativeChalets(db, chaletId, checkIn, checkOut, null, ignoreReservationId);
+                var suggestions = GetAvailableAlternativeChalets(db, chaletId, checkIn, checkOut, ignoreBookingId, ignoreReservationId);
                 return new BookingConflictResult
                 {
                     HasConflict = true,
                     ConflictingGuestName = resConflict.GuestName,
                     ConflictingDates = $"{resConflict.CheckInDate:dd/MM/yyyy} إلى {resConflict.CheckOutDate:dd/MM/yyyy}",
-                    ErrorMessage = $"⚠️ الشاليه ({chaletNum}) غير متاح!\nمسجل له حجز مسبق بالفعل للنزيل: «{resConflict.GuestName}» (هاتف: {resConflict.PhoneNumber}) في الفترة من {resConflict.CheckInDate:dd/MM/yyyy} إلى {resConflict.CheckOutDate:dd/MM/yyyy}.",
+                    ErrorMessage = $"⚠️ الشاليه ({chaletNum}) غير متاح في هذه الفترة!\nمسجل له حجز مسبق بالفعل باسم: «{resConflict.GuestName}» (هاتف: {resConflict.PhoneNumber})\nفي الفترة من {resConflict.CheckInDate:dd/MM/yyyy} إلى {resConflict.CheckOutDate:dd/MM/yyyy}.",
                     SuggestedChalets = suggestions
                 };
             }
 
             return new BookingConflictResult { HasConflict = false };
+        }
+
+        public static BookingConflictResult CheckReservationConflict(int chaletId, DateTime checkIn, DateTime checkOut, int? ignoreReservationId = null, int? ignoreBookingId = null)
+        {
+            return CheckConflict(chaletId, checkIn, checkOut, ignoreBookingId, ignoreReservationId);
         }
 
         public static List<Chalet> GetAvailableAlternativeChalets(AppDbContext db, int requestedChaletId, DateTime checkIn, DateTime checkOut, int? ignoreBookingId = null, int? ignoreReservationId = null)
@@ -479,8 +442,60 @@ namespace EaglesResort.Services
             }
         }
 
-        public static (bool Success, string Message) ChangeChalet(int bookingId, int newChaletId)
+        /// <summary>
+        /// يولّد رقم فاتورة تسلسلي بالشكل INV-2026-000001 (تسلسل داخل نفس السنة).
+        /// </summary>
+        public static string GenerateInvoiceNumber(AppDbContext db, DateTime invoiceDate)
         {
+            var prefix = $"INV-{invoiceDate.Year}-";
+
+            string? last = null;
+            try
+            {
+                last = GetLastInvoiceNumber(db, prefix);
+            }
+            catch (Microsoft.Data.SqlClient.SqlException)
+            {
+                // قاعدة بيانات قديمة اتعملت قبل إضافة عمود InvoiceNumber:
+                // بنضيفه وقت التشغيل ونحاول تاني بدل ما الحجز كله يفشل.
+                try
+                {
+                    db.Database.ExecuteSqlRaw(@"
+                        IF COL_LENGTH('dbo.Invoices', 'InvoiceNumber') IS NULL
+                            ALTER TABLE [dbo].[Invoices] ADD [InvoiceNumber] NVARCHAR(50) NOT NULL DEFAULT '';");
+
+                    last = GetLastInvoiceNumber(db, prefix);
+                }
+                catch
+                {
+                    // آخر حل: نكمل برقم مبني على أكبر Id موجود بدل ما نوقف الحجز
+                    var maxId = db.Database
+                        .SqlQueryRaw<int>("SELECT ISNULL(MAX([Id]), 0) AS [Value] FROM [dbo].[Invoices]")
+                        .FirstOrDefault();
+                    return prefix + (maxId + 1).ToString("D6");
+                }
+            }
+
+            int next = 1;
+            if (!string.IsNullOrEmpty(last) && last.Length > prefix.Length &&
+                int.TryParse(last[prefix.Length..], out var parsed) && parsed >= 0)
+            {
+                next = parsed + 1;
+            }
+
+            return prefix + next.ToString("D6");
+        }
+
+        private static string? GetLastInvoiceNumber(AppDbContext db, string prefix)
+        {
+            return db.Invoices
+                .Where(i => i.InvoiceNumber.StartsWith(prefix))
+                .OrderByDescending(i => i.InvoiceNumber)
+                .Select(i => i.InvoiceNumber)
+                .FirstOrDefault();
+        }
+
+        public static (bool Success, string Message) ChangeChalet(int bookingId, int newChaletId)        {
             using var db = CreateContext();
             var booking = db.Bookings.Include(b => b.Chalet).FirstOrDefault(b => b.Id == bookingId);
             if (booking == null) return (false, "الحجز غير موجود");
